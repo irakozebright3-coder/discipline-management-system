@@ -10,7 +10,7 @@ const incidentSchema = z.object({
   violation_name: z.string().max(200).optional(), reason: z.string().max(1000).optional(), description: z.string().max(10000).optional(),
   severity: z.enum(['Minor','Moderate','Serious','N/A']).optional(), marks_deducted: z.number().min(0).max(100000).optional(),
   remaining_marks: z.number().nullable().optional(), incident_date: z.string().date(), location: z.string().max(300).optional(),
-  status: z.enum(['Reported','Under Review','Confirmed','Resolved','Appealed','Closed']).optional(), confirmed: z.boolean().optional(),
+  status: z.enum(['Reported','Under Review','Confirmed','Resolved','Appealed','Closed']).optional(),
   evidence_url: z.string().max(2000).optional(), witnesses: z.string().max(3000).optional(), counselling: z.string().max(5000).optional(),
   action_taken: z.string().max(5000).optional(), recorded_by: z.string().max(200).optional()
 });
