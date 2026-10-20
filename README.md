@@ -39,11 +39,23 @@ Multi-tenant discipline tracking: organizations manage people, a violations cata
    ```
 
 ## Deployment target
-- Frontend: Vercel (build command `npm run build` in `frontend/`)
+- Frontend: Vercel (this repo is ready to deploy — see below)
 - Express API: Render (root directory `server/`)
 - Auth and PostgreSQL: Supabase
 
 See [architecture and deployment notes](docs/architecture-and-deployment.md) before production setup.
+
+### Deploying the frontend to Vercel
+1. Push this repository to GitHub, then go to [vercel.com/new](https://vercel.com/new) and import it.
+2. Set **Root Directory** to `frontend` (Vercel auto-detects Vite: build `npm run build`, output `dist`).
+3. Add the environment variables (Project → Settings → Environment Variables):
+   - `VITE_SUPABASE_URL` — your Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY` — your Supabase anon (public) key
+   - `VITE_API_BASE_URL` — the public URL of the deployed API (e.g. `https://sdms-api.onrender.com`)
+4. Deploy. On your first deploy Vercel gives you the production domain (e.g. `https://discipline-management-system.vercel.app`).
+5. On the API host, add that domain to `CORS_ORIGINS` (comma-separated) and redeploy the API so the frontend is allowed to call it.
+
+The `frontend/vercel.json` handles SPA rewrites and immutable caching for hashed assets, so the app can also be served from any direct URL.
 
 ## Security
 - Never commit credentials, private keys, real student records or database exports. Use synthetic test data during development.
