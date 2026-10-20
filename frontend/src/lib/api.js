@@ -16,14 +16,14 @@ export async function apiRequest(path, options = {}) {
   if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
   return body;
 }
+export const listOrganizations = () => apiRequest('/api/organizations');
 export const listPersons = (organizationId) => apiRequest(`/api/persons?organization_id=${encodeURIComponent(organizationId)}`);
 export const createPerson = (person) => apiRequest('/api/persons', { method: 'POST', body: JSON.stringify(person) });
-export const listIncidents = (organizationId) => apiRequest(`/api/incidents?organization_id=${encodeURIComponent(organizationId)}`);
-export const createIncident = (incident) => apiRequest('/api/incidents', { method: 'POST', body: JSON.stringify(incident) });
-export const listOrganizations = () => apiRequest('/api/organizations');
 export const getPerson = (id, organizationId) => apiRequest(`/api/persons/${id}?organization_id=${encodeURIComponent(organizationId)}`);
 export const updatePerson = (id, changes, organizationId) => apiRequest(`/api/persons/${id}?organization_id=${encodeURIComponent(organizationId)}`, { method: 'PATCH', body: JSON.stringify(changes) });
 export const deletePerson = (id, organizationId) => apiRequest(`/api/persons/${id}?organization_id=${encodeURIComponent(organizationId)}`, { method: 'DELETE' });
+export const listIncidents = (organizationId) => apiRequest(`/api/incidents?organization_id=${encodeURIComponent(organizationId)}`);
+export const createIncident = (incident) => apiRequest('/api/incidents', { method: 'POST', body: JSON.stringify(incident) });
 export const getIncident = (id, organizationId) => apiRequest(`/api/incidents/${id}?organization_id=${encodeURIComponent(organizationId)}`);
 export const updateIncident = (id, changes, organizationId) => apiRequest(`/api/incidents/${id}?organization_id=${encodeURIComponent(organizationId)}`, { method: 'PATCH', body: JSON.stringify(changes) });
 export const deleteIncident = (id, organizationId) => apiRequest(`/api/incidents/${id}?organization_id=${encodeURIComponent(organizationId)}`, { method: 'DELETE' });

@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase.js';
+import { supabase } from './supabase.js';
 
 export async function signInWithPassword(email, password) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -13,8 +13,4 @@ export async function signUpWithPassword(email, password, fullName) {
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
-}
-export function subscribeToAuth(callback) {
-  const { data } = supabase.auth.onAuthStateChange((event, session) => callback(event, session));
-  return () => data.subscription.unsubscribe();
 }
