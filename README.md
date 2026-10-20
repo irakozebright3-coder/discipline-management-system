@@ -45,6 +45,8 @@ Multi-tenant discipline tracking: organizations manage people, a violations cata
 
 See [architecture and deployment notes](docs/architecture-and-deployment.md) before production setup.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Firakozebright3-coder%2Fdiscipline-management-system&root-directory=frontend&project-name=discipline-management-system)
+
 ### Deploying the frontend to Vercel
 1. Push this repository to GitHub, then go to [vercel.com/new](https://vercel.com/new) and import it.
 2. Set **Root Directory** to `frontend` (Vercel auto-detects Vite: build `npm run build`, output `dist`).
