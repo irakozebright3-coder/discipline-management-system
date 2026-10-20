@@ -27,3 +27,8 @@ export function requireWriteRole(req, res, next) {
   if (!WRITE_ROLES.has(req.organizationRole)) return res.status(403).json({ error: 'Your role cannot create or modify records.' });
   next();
 }
+const ADMIN_ROLES = new Set(['org_admin', 'platform_owner']);
+export function requireAdminRole(req, res, next) {
+  if (!ADMIN_ROLES.has(req.organizationRole)) return res.status(403).json({ error: 'Only organization admins can perform this action.' });
+  next();
+}

@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import { requireAuth } from './middleware/auth.js';
 import persons from './routes/persons.js';
 import incidents from './routes/incidents.js';
+import violations from './routes/violations.js';
+import organizations from './routes/organizations.js';
 
 const app = express();
 const origins = (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',').map(s => s.trim()).filter(Boolean);
@@ -16,8 +18,10 @@ app.use(cors({ origin(origin, callback) {
 app.use(express.json({ limit: '1mb' }));
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'sdms-api' }));
 app.use('/api', requireAuth);
+app.use('/api/organizations', organizations);
 app.use('/api/persons', persons);
 app.use('/api/incidents', incidents);
+app.use('/api/violations', violations);
 app.use((err, _req, res, _next) => {
   if (err?.message === 'Origin not allowed by CORS') return res.status(403).json({ error: err.message });
   console.error('Unhandled API error:', err?.message || 'unknown error');

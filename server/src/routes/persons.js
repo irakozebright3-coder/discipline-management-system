@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { adminDb } from '../supabase.js';
-import { requireOrganizationRole, requireWriteRole } from '../middleware/auth.js';
+import { requireOrganizationRole, requireWriteRole, requireAdminRole } from '../middleware/auth.js';
 
 const router = Router();
 const personSchema = z.object({
@@ -30,3 +30,45 @@ router.post('/', requireOrganizationRole, requireWriteRole, async (req, res) => 
   res.status(201).json({ data });
 });
 export default router;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function loadPerson(id) {
+  if (!UUID_RE.test(id)) return null;
+  const { data } = await adminDb.from('persons').select('*').eq('id', id).maybeSingle();
+  return data || null;
+}
+
+router.get('/:id', requireOrganizationRole, async (req, res) => {
+  const person = await loadPerson(req.params.id);
+  if (!person || person.organization_id !== req.organizationId) {
+    return res.status(404).json({ error: 'Person not found in this organization.' });
+  }
+  res.json({ data: person });
+});
+
+const personUpdateSchema = personSchema.partial().omit({ organization_id: true, track: true });
+router.patch('/:id', requireOrganizationRole, requireWriteRole, async (req, res) => {
+  const person = await loadPerson(req.params.id);
+  if (!person || person.organization_id !== req.organizationId) {
+    return res.status(404).json({ error: 'Person not found in this organization.' });
+  }
+  const parsed = personUpdateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid person update.', details: parsed.error.flatten() });
+  if (Object.keys(parsed.data).length === 0) return res.status(400).json({ error: 'No valid fields to update.' });
+  const { data, error } = await adminDb.from('persons').update(parsed.data).eq('id', person.id).select().single();
+  if (error) return res.status(error.code === '23505' ? 409 : 400).json({ error: error.code === '23505' ? 'This person ID already exists in the organization.' : 'Could not update person.' });
+  await adminDb.from('audit_logs').insert({ organization_id: req.organizationId, actor_id: req.user.id, action: 'update', entity_type: 'person', entity_id: data.id, details: { changes: parsed.data } });
+  res.json({ data });
+});
+
+router.delete('/:id', requireOrganizationRole, requireAdminRole, async (req, res) => {
+  const person = await loadPerson(req.params.id);
+  if (!person || person.organization_id !== req.organizationId) {
+    return res.status(404).json({ error: 'Person not found in this organization.' });
+  }
+  const { error } = await adminDb.from('persons').delete().eq('id', person.id);
+  if (error) return res.status(400).json({ error: 'Could not delete person. Incidents may still reference them.' });
+  await adminDb.from('audit_logs').insert({ organization_id: req.organizationId, actor_id: req.user.id, action: 'delete', entity_type: 'person', entity_id: person.id, details: { person_id: person.person_id, full_name: person.full_name } });
+  res.status(204).end();
+});
