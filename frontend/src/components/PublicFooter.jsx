@@ -18,6 +18,8 @@ export default function PublicFooter() {
           <Link to="/about">About</Link>
           <Link to="/community">Community</Link>
           <Link to="/help">Help Center</Link>
+          <Link to="/faqs">FAQs</Link>
+          <Link to="/contact">Contact</Link>
           <Link to="/login">Sign in</Link>
         </nav>
 
