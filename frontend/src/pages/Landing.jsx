@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Activity, ArrowDownRight, ArrowRight, BarChart3, Briefcase, CheckCircle2,
+  ArrowDownRight, ArrowRight, BarChart3, Briefcase, CheckCircle2,
   ChevronLeft, ChevronRight, Clock3, FileCheck2, GitBranch, GraduationCap,
   HeartHandshake, Layers, LockKeyhole, School, Search, ShieldCheck, Sparkles, Users
 } from 'lucide-react';
 import { getCommunityStats, getCreatorProfile } from '../lib/api.js';
 import MemberGallery from '../components/MemberGallery.jsx';
-import { TRACKS, WELCOME_MEMBERS, membersByTrack } from '../lib/memberGallery.js';
+import { TRACKS, membersByTrack } from '../lib/memberGallery.js';
 import '../styles/landing.css';
 
 const ROTATING_AUDIENCES = ['schools', 'universities', 'organizations'];
@@ -27,6 +27,10 @@ const TRACK_TEXT = {
   ORGANIZATION: 'Manage conduct cases across branches and offices with clear review and appeal stages.',
   COMMUNITY: 'Document code-of-conduct cases, follow-ups and outcomes for members and volunteers.'
 };
+
+const SPOTLIGHT_MEMBERS = [0, 1].flatMap((personIndex) =>
+  TRACKS.map((track) => membersByTrack(track.key)[personIndex]).filter(Boolean)
+);
 
 const SHOWCASES = [
   {
@@ -333,7 +337,7 @@ export default function Landing() {
           <div><span className="dm-section-kicker">PEOPLE-FIRST BY DESIGN</span><h2>Designed for the people <span className="dm-title-gradient">behind every record.</span></h2></div>
           <p>Illustrative profile examples across all five tracks. Real institution records remain private and are shown only to authorized users.</p>
         </div>
-        <div className="dm-gallery-wrap"><MemberGallery members={WELCOME_MEMBERS} limit={8} showRoles={true} /></div>
+        <div className="dm-gallery-wrap"><MemberGallery members={SPOTLIGHT_MEMBERS} limit={10} showRoles={true} /></div>
       </section>
 
       <section className="dm-final-cta">
