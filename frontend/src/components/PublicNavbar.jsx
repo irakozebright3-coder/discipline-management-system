@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import SdmsLogo from './SdmsLogo.jsx';
-import { Button } from './ui/button.jsx';
 import { useAuth } from '../lib/AuthContext.jsx';
 
 const links = [
@@ -47,17 +46,11 @@ export default function PublicNavbar() {
 
         <div className="dm-nav-actions flex items-center gap-2">
           {session ? (
-            <Link to="/dashboard" onClick={closeMobile}>
-              <Button size="sm" className="dm-nav-cta">Open app</Button>
-            </Link>
+            <Link to="/dashboard" className="dm-nav-cta-link" onClick={closeMobile}>Open app</Link>
           ) : (
             <>
-              <Link to="/login" onClick={closeMobile}>
-                <Button variant="ghost" size="sm" className="dm-nav-ghost">Sign in</Button>
-              </Link>
-              <Link to="/register" onClick={closeMobile}>
-                <Button size="sm" className="dm-nav-cta">Get started</Button>
-              </Link>
+              <Link to="/login" className="dm-nav-ghost" onClick={closeMobile}>Sign in</Link>
+              <Link to="/register" className="dm-nav-cta-link" onClick={closeMobile}>Get started</Link>
             </>
           )}
           <button
