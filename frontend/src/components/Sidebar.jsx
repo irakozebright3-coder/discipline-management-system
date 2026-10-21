@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileWarning, ListChecks, Network, History, BarChart3,
-  Settings2, ShieldCheck, LogOut, Building2, Menu, X
+  Settings2, LogOut, Building2, Menu, X
 } from 'lucide-react';
 import SdmsLogo from './SdmsLogo.jsx';
 import { cn } from '../lib/utils.js';
@@ -92,21 +92,6 @@ export default function Sidebar() {
         >
           <Building2 className="h-4 w-4 shrink-0" /> Platform console
         </NavLink>
-      )}
-      {membership && ['org_admin', 'platform_owner'].includes(membership.role) && (
-        <div className="mt-4 border-t border-border pt-3">
-          <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground">Administration</p>
-          <NavLink
-            to="/settings"
-            onClick={closeMobile}
-            className={({ isActive }) => cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-              isActive ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-            )}
-          >
-            <ShieldCheck className="h-4 w-4 shrink-0" /> Organization controls
-          </NavLink>
-        </div>
       )}
     </nav>
   );
