@@ -1,208 +1,97 @@
-import { useEffect, useState } from 'react';
-import { supabase } from './lib/supabase.js';
-import { signOut } from './lib/auth.js';
-import { listOrganizations, platformGet } from './lib/api.js';
-import LoginView from './views/LoginView.jsx';
-import PublicHomeView from './views/PublicHomeView.jsx';
-import AboutView from './views/AboutView.jsx';
-import CommunityView from './views/CommunityView.jsx';
-import HelpView from './views/HelpView.jsx';
-import SetupView from './views/SetupView.jsx';
-import StructureView from './views/StructureView.jsx';
-import HistoryView from './views/HistoryView.jsx';
-import ReportsView from './views/ReportsView.jsx';
-import StudentScoreCardView from './views/StudentScoreCardView.jsx';
-import SettingsView from './views/SettingsView.jsx';
-import PlatformView from './views/PlatformView.jsx';
-import OverviewView from './views/OverviewView.jsx';
-import PeopleView from './views/PeopleView.jsx';
-import IncidentsView from './views/IncidentsView.jsx';
-import ViolationsView from './views/ViolationsView.jsx';
-import AdminView from './views/AdminView.jsx';
+import { Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './lib/AuthContext.jsx';
+import { OrgProvider } from './hooks/useOrg.jsx';
+import ProtectedRoute from './lib/ProtectedRoute.jsx';
+import PlatformOwnerRoute from './lib/PlatformOwnerRoute.jsx';
+import PageNotFound from './lib/PageNotFound.jsx';
+import PublicNavbar from './components/PublicNavbar.jsx';
+import PublicFooter from './components/PublicFooter.jsx';
+import AuthLayout from './components/AuthLayout.jsx';
+import Layout from './components/Layout.jsx';
+import PlatformLayout from './components/PlatformLayout.jsx';
+import ScrollToTop from './components/ScrollToTop.jsx';
+import Landing from './pages/Landing.jsx';
+import About from './pages/About.jsx';
+import Community from './pages/Community.jsx';
+import HelpCenter from './pages/HelpCenter.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
+import Setup from './pages/Setup.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import People from './pages/People.jsx';
+import StudentScoreCard from './pages/StudentScoreCard.jsx';
+import Incidents from './pages/Incidents.jsx';
+import Violations from './pages/Violations.jsx';
+import Structure from './pages/Structure.jsx';
+import History from './pages/History.jsx';
+import Reports from './pages/Reports.jsx';
+import Settings from './pages/Settings.jsx';
+import OwnerDashboard from './pages/platform/OwnerDashboard.jsx';
+import Organizations from './pages/platform/Organizations.jsx';
+import PlatformUsers from './pages/platform/Users.jsx';
+import AuditLogs from './pages/platform/AuditLogs.jsx';
+import Contributors from './pages/platform/Contributors.jsx';
+import CreatorProfileManage from './pages/platform/CreatorProfileManage.jsx';
+import HelpCenterManage from './pages/platform/HelpCenterManage.jsx';
+import Backups from './pages/platform/Backups.jsx';
+import SystemControl from './pages/platform/SystemControl.jsx';
 
-const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'people', label: 'People' },
-  { id: 'incidents', label: 'Incidents' },
-  { id: 'violations', label: 'Violations' },
-  { id: 'structure', label: 'Structure' },
-  { id: 'history', label: 'History' },
-  { id: 'reports', label: 'Reports' },
-  { id: 'settings', label: 'Settings' },
-  { id: 'admin', label: 'Admin' },
-  { id: 'platform', label: 'Platform', ownerOnly: true }
-];
-const PUBLIC_TABS = [
-  { id: 'landing', label: 'Home' },
-  { id: 'about', label: 'About' },
-  { id: 'community', label: 'Community' },
-  { id: 'help', label: 'Help' }
-];
-
-function Footer({ year }) {
-  return (
-    <footer className="footer">
-      <p>© {year} SDMS — Discipline Management System. All rights reserved.</p>
-      <p className="muted">Built with React + Express · Every action is recorded in the audit trail</p>
-    </footer>
-  );
+function PublicPage({ children }) {
+  return <div className="flex min-h-screen flex-col"><PublicNavbar /><div className="flex-1">{children}</div><PublicFooter /></div>;
 }
 
 export default function App() {
-  const [session, setSession] = useState(null);
-  const [ready, setReady] = useState(false);
-  const [orgs, setOrgs] = useState([]);
-  const [activeOrgId, setActiveOrgId] = useState(localStorage.getItem('sdms.org') || '');
-  const [tab, setTab] = useState('landing');        // public tab when signed out
-  const [appTab, setAppTab] = useState('overview'); // main app tab when signed in
-  const [studentId, setStudentId] = useState('');
-  const [isPlatformOwner, setIsPlatformOwner] = useState(false);
-  const [now, setNow] = useState(Date.now());
-  const year = new Date(now).getFullYear();
-
-  // Footer year: re-check the clock every 10 minutes so the copyright flips right after midnight.
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 600000);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true); });
-    const { data } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      if (!s) { setOrgs([]); setActiveOrgId(''); localStorage.removeItem('sdms.org'); }
-    });
-    return () => data.subscription.unsubscribe();
-  }, []);
-
-  const userId = session?.user?.id;
-  useEffect(() => {
-    if (!userId) { setOrgs([]); setIsPlatformOwner(false); setStudentId(''); return; }
-    setAppTab('overview');
-    platformGet('dashboard').then(() => setIsPlatformOwner(true)).catch(() => setIsPlatformOwner(false));
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await listOrganizations();
-        if (cancelled) return;
-        const list = data || [];
-        setOrgs(list);
-        if (list.length) {
-          setActiveOrgId(prev => {
-            const stillValid = list.some(m => m.organization.id === prev);
-            const next = stillValid ? prev : list[0].organization.id;
-            if (next) localStorage.setItem('sdms.org', next);
-            return next;
-          });
-        }
-      } catch { if (!cancelled) setOrgs([]); }
-    })();
-    return () => { cancelled = true; };
-  }, [userId]);
-
-  function chooseOrg(id) {
-    setActiveOrgId(id);
-    if (id) localStorage.setItem('sdms.org', id);
-  }
-
-  async function doSignOut() {
-    await signOut();
-    setTab('landing'); setAppTab('overview'); setIsPlatformOwner(false);
-  }
-
-  async function onOrgCreated() {
-    const { data } = await listOrganizations();
-    const list = data || [];
-    setOrgs(list);
-    if (list.length) chooseOrg(list[0].organization.id);
-  }
-
-  function openStudent(id) {
-    setStudentId(id);
-    setAppTab('student');
-  }
-
-  if (!ready) return <div className="center muted">Loading…</div>;
-
-  if (!session) {
-    return (
-      <div className="app">
-        <header className="topbar">
-          <span className="brand">SDMS</span>
-          <nav className="tabs" aria-label="Public navigation">
-            {PUBLIC_TABS.map(t => (
-              <button key={t.id} className={`tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
-            ))}
-            <button className={`tab${tab === 'login' ? ' active' : ''}`} onClick={() => setTab('login')}>Sign in</button>
-          </nav>
-        </header>
-        <main className="content" key={tab}>
-          {tab === 'landing' && <PublicHomeView onGoLogin={() => setTab('login')} />}
-          {tab === 'about' && <AboutView />}
-          {tab === 'community' && <CommunityView />}
-          {tab === 'help' && <HelpView />}
-          {tab === 'login' && <LoginView />}
-        </main>
-        <Footer year={year} />
-      </div>
-    );
-  }
-
-  const membership = orgs.find(m => m.organization.id === activeOrgId);
-  const isAdmin = membership && ['org_admin', 'platform_owner'].includes(membership.role);
-  const canWrite = membership && ['org_admin', 'platform_owner', 'teacher', 'staff'].includes(membership.role);
-  const orgId = membership?.organization.id || '';
-
   return (
-    <div className="app">
-      <header className="topbar">
-        <span className="brand">SDMS</span>
-        <select className="input org-select" value={orgId} onChange={e => chooseOrg(e.target.value)}
-          aria-label="Active organization">
-          {orgs.length === 0 && <option value="">No organization yet</option>}
-          {orgs.map(m => (
-            <option key={m.organization.id} value={m.organization.id}>
-              {m.organization.name} ({m.role})
-            </option>
-          ))}
-        </select>
-        <nav className="tabs" aria-label="Main navigation">
-          {TABS.map(t => {
-            const visible = (t.id !== 'admin' || isAdmin) && (t.id !== 'platform' || isPlatformOwner);
-            if (!visible) return null;
-            return (
-              <button key={t.id} className={`tab${appTab === t.id ? ' active' : ''}`}
-                onClick={() => setAppTab(t.id)}>{t.label}</button>
-            );
-          })}
-        </nav>
-        <button className="link" onClick={doSignOut}>Sign out</button>
-      </header>
+    <AuthProvider>
+      <OrgProvider>
+        <ScrollToTop />
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<PublicPage><Landing /></PublicPage>} />
+          <Route path="/about" element={<PublicPage><About /></PublicPage>} />
+          <Route path="/community" element={<PublicPage><Community /></PublicPage>} />
+          <Route path="/help" element={<PublicPage><HelpCenter /></PublicPage>} />
 
-      <main className="content" key={appTab + (appTab === 'student' ? studentId : '') + orgId}>
-        {orgs.length === 0 ? (
-          <SetupView onCreated={onOrgCreated} />
-        ) : (
-          <>
-            {appTab === 'overview' && <OverviewView orgId={orgId} org={membership.organization} role={membership.role} />}
-            {appTab === 'people' && <PeopleView orgId={orgId} track={membership.organization.track} canWrite={canWrite} isAdmin={isAdmin} onOpenStudent={openStudent} />}
-            {appTab === 'incidents' && <IncidentsView orgId={orgId} canWrite={canWrite} isAdmin={isAdmin} />}
-            {appTab === 'violations' && <ViolationsView orgId={orgId} canWrite={isAdmin} />}
-            {appTab === 'structure' && <StructureView orgId={orgId} track={membership.organization.track} canWrite={canWrite} isAdmin={isAdmin} />}
-            {appTab === 'history' && <HistoryView orgId={orgId} />}
-            {appTab === 'reports' && <ReportsView orgId={orgId} track={membership.organization.track} />}
-            {appTab === 'settings' && <SettingsView orgId={orgId} org={membership.organization} role={membership.role} isAdmin={isAdmin} />}
-            {appTab === 'student' && studentId && (
-              <StudentScoreCardView orgId={orgId} personId={studentId} track={membership.organization.track}
-                canWrite={canWrite} onBack={() => setAppTab('people')} />
-            )}
-            {appTab === 'admin' && isAdmin && <AdminView orgId={orgId} org={membership.organization} role={membership.role} />}
-            {appTab === 'platform' && isPlatformOwner && <PlatformView />}
-          </>
-        )}
-      </main>
+          {/* Auth */}
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+          </Route>
 
-      <Footer year={year} />
-    </div>
+          {/* App (organization-scoped) */}
+          <Route path="/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />
+          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/people" element={<People />} />
+            <Route path="/people/:personId" element={<StudentScoreCard />} />
+            <Route path="/incidents" element={<Incidents />} />
+            <Route path="/violations" element={<Violations />} />
+            <Route path="/structure" element={<Structure />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
+
+          {/* Platform owner console */}
+          <Route path="/platform" element={<PlatformOwnerRoute><PlatformLayout /></PlatformOwnerRoute>}>
+            <Route index element={<OwnerDashboard />} />
+            <Route path="organizations" element={<Organizations />} />
+            <Route path="users" element={<PlatformUsers />} />
+            <Route path="audit-logs" element={<AuditLogs />} />
+            <Route path="contributors" element={<Contributors />} />
+            <Route path="creator-profile" element={<CreatorProfileManage />} />
+            <Route path="help-center" element={<HelpCenterManage />} />
+            <Route path="backups" element={<Backups />} />
+            <Route path="system-control" element={<SystemControl />} />
+          </Route>
+
+          <Route path="*" element={<PageNotFound />} />
+        </Routes>
+      </OrgProvider>
+    </AuthProvider>
   );
 }
