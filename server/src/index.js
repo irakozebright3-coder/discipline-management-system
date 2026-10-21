@@ -1,55 +1,57 @@
-import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
-import { requireAuth } from './middleware/auth.js';
-import persons from './routes/persons.js';
-import incidents from './routes/incidents.js';
-import violations from './routes/violations.js';
-import organizations from './routes/organizations.js';
-import structure from './routes/structure.js';
+import cors from 'cors';
 import publicRoutes from './routes/public.js';
+import institutions from './routes/institutions.js';
+import members from './routes/members.js';
+import people from './routes/people.js';
+import structure from './routes/structure.js';
+import categories from './routes/categories.js';
+import incidents from './routes/incidents.js';
+import scoring from './routes/scoring.js';
+import notifications from './routes/notifications.js';
+import auditRoutes from './routes/audit.js';
+import reports from './routes/reports.js';
+import profiles from './routes/profiles.js';
+import dashboard from './routes/dashboard.js';
 import platform from './routes/platform.js';
-import audit from './routes/audit.js';
+import { requireAuth } from './middleware/auth.js';
+import { isPlatformOwner } from './middleware/auth.js';
 
 const app = express();
-const origins = (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',').map(s => s.trim()).filter(Boolean);
+
 app.use(helmet());
-// CORS: allow same-origin requests (frontend + API share one Vercel domain)
-// plus any origin listed in CORS_ORIGINS for local and split deployments.
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const sameOrigin = !!origin && !!req.headers.host && origin === `https://${req.headers.host}`;
-  if (!origin || sameOrigin || origins.includes(origin)) {
-    if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,PUT,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-    if (req.method === 'OPTIONS') return res.sendStatus(204);
-    return next();
-  }
-  return res.status(403).json({ error: 'Origin not allowed by CORS' });
-});
-app.use(express.json({ limit: '1mb' }));
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'sdms-api' }));
-// Public content endpoints are mounted BEFORE requireAuth so they stay anonymous.
+app.use(cors());
+app.use(express.json({ limit: '6mb' })); // base64 evidence uploads (4MB files ≈ 5.4MB encoded)
+
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'discipline-management-api' }));
+
 app.use('/api/public', publicRoutes);
+
 app.use('/api', requireAuth);
-app.use('/api/organizations', organizations);
-app.use('/api/persons', persons);
-app.use('/api/incidents', incidents);
-app.use('/api/violations', violations);
+app.use('/api/institutions', institutions);
+app.use('/api/institutions', members);
+app.use('/api/profiles', profiles);
+app.use('/api/notifications', notifications);
+app.use('/api/people', people);
 app.use('/api/structure', structure);
+app.use('/api/categories', categories);
+app.use('/api/incidents', incidents);
+app.use('/api/scoring', scoring);
+app.use('/api/audit-logs', auditRoutes);
+app.use('/api/reports', reports);
+app.use('/api/dashboard', dashboard);
 app.use('/api/platform', platform);
-app.use('/api/audit-logs', audit);
+
+app.use((_req, res) => res.status(404).json({ error: 'Not found.' }));
+
 app.use((err, _req, res, _next) => {
-  if (err?.message === 'Origin not allowed by CORS') return res.status(403).json({ error: err.message });
-  console.error('Unhandled API error:', err?.message || 'unknown error');
-  res.status(500).json({ error: 'Internal server error.' });
+  console.error('Unhandled API error:', err.message);
+  res.status(500).json({ error: 'Something went wrong on our side. Please try again.' });
 });
-// On Vercel the Express app runs as a serverless function (api/index.js),
-// so we only bind a local port when NOT running there.
-const port = Number(process.env.PORT || 4000);
-if (!process.env.VERCEL) {
+
+const port = process.env.PORT || 3000;
+if (process.env.VERCEL !== '1') {
   app.listen(port, () => console.log(`Discipline Management API listening on port ${port}`));
 }
-
 export default app;

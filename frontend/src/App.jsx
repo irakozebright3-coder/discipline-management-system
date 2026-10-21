@@ -11,6 +11,7 @@ import Layout from './components/Layout.jsx';
 import PlatformLayout from './components/PlatformLayout.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
 import Landing from './pages/Landing.jsx';
+import TrackPage from './pages/TrackPage.jsx';
 import About from './pages/About.jsx';
 import Community from './pages/Community.jsx';
 import HelpCenter from './pages/HelpCenter.jsx';
@@ -51,6 +52,7 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<PublicPage><Landing /></PublicPage>} />
           <Route path="/about" element={<PublicPage><About /></PublicPage>} />
+          <Route path="/tracks/:track" element={<PublicPage><TrackPage /></PublicPage>} />
           <Route path="/community" element={<PublicPage><Community /></PublicPage>} />
           <Route path="/help" element={<PublicPage><HelpCenter /></PublicPage>} />
 

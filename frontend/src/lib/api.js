@@ -59,7 +59,7 @@ async function publicRequest(path) {
   if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
   return body;
 }
-export const getCommunityStats = () => publicRequest('/community-stats');
+export const getCommunityStats = () => publicRequest('/stats');
 export const getContributors = () => publicRequest('/contributors');
 export const getCreatorProfile = () => publicRequest('/creator-profile');
 export const getHelpArticles = () => publicRequest('/help-articles');

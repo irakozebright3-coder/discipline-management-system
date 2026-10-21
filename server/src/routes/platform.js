@@ -1,239 +1,185 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { adminDb } from '../supabase.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requirePlatformOwner } from '../middleware/auth.js';
+import { audit, zodMessage, listUserDirectory } from '../lib.js';
 
-// Platform-owner console. Ownership is real: the caller must be the configured
-// platform owner (platform_config.app_settings.owner_ids) or hold a
-// 'platform_owner' membership in any organization.
 const router = Router();
-
-// Ownership resolution, in priority order:
-//  1. PLATFORM_OWNER_EMAILS env var (comma-separated) — explicit deployment config.
-//  2. platform_config.app_settings.owner_ids — owners claimed in the database.
-//  3. a 'platform_owner' membership in any organization.
-//  4. first-user bootstrap: on a fresh install with no owner configured anywhere,
-//     the first authenticated caller claims ownership (recorded in app_settings).
-async function isPlatformOwner(userId, email) {
-  const envOwners = (process.env.PLATFORM_OWNER_EMAILS || '')
-    .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-  if (envOwners.length && email && envOwners.includes(email.toLowerCase())) return true;
-
-  const { data: config } = await adminDb.from('platform_config').select('id, app_settings').limit(1).maybeSingle();
-  const settings = config?.app_settings || {};
-  const ownerIds = settings.owner_ids || [];
-  if (ownerIds.includes(userId)) return true;
-
-  const { data: membership } = await adminDb.from('organization_members')
-    .select('role').eq('user_id', userId).eq('role', 'platform_owner').limit(1).maybeSingle();
-  if (membership) return true;
-
-  if (!envOwners.length && ownerIds.length === 0 && config) {
-    await adminDb.from('platform_config')
-      .update({ app_settings: { ...settings, owner_ids: [userId] }, updated_at: new Date().toISOString() })
-      .eq('id', config.id);
-    await adminDb.from('platform_audit_logs').insert({
-      action: 'owner.bootstrap', target: 'platform_config',
-      details: 'First user claimed platform ownership on a fresh install.',
-      user_name: email || userId, actor_id: userId, result: 'Success'
-    });
-    return true;
-  }
-  return false;
-}
-
-async function requirePlatformOwner(req, res, next) {
-  if (!(await isPlatformOwner(req.user.id, req.user.email))) {
-    return res.status(403).json({ error: 'Platform owner access required.' });
-  }
-  next();
-}
 router.use(requireAuth, requirePlatformOwner);
-
-async function platformLog(action, target, user, details = '') {
-  await adminDb.from('platform_audit_logs').insert({
-    action, target, details, user_name: user.email || user.id,
-    actor_id: user.id, result: 'Success'
-  });
-}
 
 router.get('/whoami', (req, res) => res.json({ data: { owner: true } }));
 
 router.get('/dashboard', async (req, res) => {
-  const [orgs, people, incidents, users, visits] = await Promise.all([
-    adminDb.from('organizations').select('*', { count: 'exact' }),
-    adminDb.from('persons').select('id', { count: 'exact', head: true }),
-    adminDb.from('incidents').select('id', { count: 'exact', head: true }),
+  const [inst, activeInst, users, people, incidents, supports] = await Promise.all([
+    adminDb.from('institutions').select('id', { count: 'exact', head: true }),
+    adminDb.from('institutions').select('id', { count: 'exact', head: true }).eq('status', 'active'),
     adminDb.from('profiles').select('id', { count: 'exact', head: true }),
-    adminDb.from('platform_config').select('*').limit(1).maybeSingle()
+    adminDb.from('people').select('id', { count: 'exact', head: true }),
+    adminDb.from('incidents').select('id', { count: 'exact', head: true }),
+    adminDb.from('support_requests').select('id', { count: 'exact', head: true }).eq('status', 'open')
   ]);
-  res.json({ data: {
-    organizations: orgs.data || [],
-    counts: {
-      organizations: orgs.count || 0, people: people.count || 0,
-      incidents: incidents.count || 0, users: users.count || 0,
-      visitors: Number(visits?.visitor_count || 0)
-    },
-    config: visits || null
-  }});
+  const { data: recent } = await adminDb.from('institutions').select('id, name, type, track, status, created_at').order('created_at', { ascending: false }).limit(10);
+  const { data: settings } = await adminDb.from('platform_settings').select('app_settings').eq('id', 1).maybeSingle();
+  const app = settings?.app_settings || {};
+  res.json({
+    data: {
+      counts: {
+        institutions: inst.count || 0, active_institutions: activeInst.count || 0,
+        users: users.count || 0, people: people.count || 0,
+        incidents: incidents.count || 0, open_support: supports.count || 0
+      },
+      institutions: recent || [],
+      config: { system_version: app.system_version || '1.0.0', maintenance_mode: !!app.maintenance_mode, system_health: app.system_health || 'Healthy', visitors: app.visitors || 0 }
+    }
+  });
+});
+
+router.get('/institutions', async (_req, res) => {
+  const { data } = await adminDb.from('institutions').select('*').order('created_at', { ascending: false });
+  const { data: memberCounts } = await adminDb.from('institution_memberships').select('institution_id').eq('status', 'active');
+  const counts = {};
+  for (const m of memberCounts || []) counts[m.institution_id] = (counts[m.institution_id] || 0) + 1;
+  res.json({ data: (data || []).map(i => ({ ...i, member_count: counts[i.id] || 0 })) });
+});
+
+const instPatch = z.object({ status: z.enum(['active', 'suspended', 'archived']).optional(), name: z.string().min(2).max(200).optional() });
+
+router.patch('/institutions/:id', async (req, res) => {
+  const parsed = instPatch.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid update.' });
+  const { data, error } = await adminDb.from('institutions').update(parsed.data).eq('id', req.params.id).select().single();
+  if (error) return res.status(404).json({ error: 'Institution not found.' });
+  await adminDb.from('platform_audit_logs').insert({
+    action: parsed.data.status ? `institution.${parsed.data.status}` : 'institution.update',
+    target: data.name, details: JSON.stringify(parsed.data), user_name: req.user.email, actor_id: req.user.id, result: 'Success'
+  });
+  res.json({ data });
 });
 
 router.get('/users', async (_req, res) => {
-  const { data, error } = await adminDb.from('profiles').select('id, full_name, created_at').order('created_at', { ascending: false }).limit(200);
-  if (error) return res.status(500).json({ error: 'Could not load users.' });
-  res.json({ data });
+  const directory = await listUserDirectory(10);
+  const { data: memberships } = await adminDb.from('institution_memberships').select('user_id, role, status, institution_id');
+  const byUser = {};
+  for (const m of memberships || []) (byUser[m.user_id] = byUser[m.user_id] || []).push(m);
+  const { data: settings } = await adminDb.from('platform_settings').select('app_settings').eq('id', 1).maybeSingle();
+  const owners = new Set(settings?.app_settings?.owner_ids || []);
+  res.json({
+    data: Object.values(directory.byId).map(u => ({
+      id: u.id, email: u.email, full_name: u.full_name, created_at: u.created_at,
+      is_owner: owners.has(u.id), memberships: (byUser[u.id] || []).length
+    })).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+  });
 });
 
 router.get('/audit-logs', async (_req, res) => {
-  const { data, error } = await adminDb.from('platform_audit_logs').select('*').order('created_at', { ascending: false }).limit(200);
-  if (error) return res.status(500).json({ error: 'Could not load audit logs.' });
-  res.json({ data });
+  const { data } = await adminDb.from('platform_audit_logs').select('*').order('created_at', { ascending: false }).limit(200);
+  res.json({ data: data || [] });
 });
 
 router.get('/org-audit-logs', async (_req, res) => {
-  const { data, error } = await adminDb.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200);
-  if (error) return res.status(500).json({ error: 'Could not load audit logs.' });
-  res.json({ data });
+  const { data } = await adminDb.from('audit_logs').select('*, institutions(name)').order('created_at', { ascending: false }).limit(200);
+  res.json({ data: data || [] });
 });
 
-const backupSchema = z.object({
-  name: z.string().trim().min(1).max(200),
-  status: z.enum(['Completed','Running','Failed']).default('Completed'),
-  size: z.string().max(50).default(''),
-  details: z.string().max(500).default('')
-});
-router.post('/backups', async (req, res) => {
-  const parsed = backupSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Invalid backup record.', details: parsed.error.flatten() });
-  const { data, error } = await adminDb.from('platform_backups')
-    .insert({ ...parsed.data, created_by_name: req.user.email || 'platform owner' }).select().single();
-  if (error) return res.status(400).json({ error: 'Could not create backup record.' });
-  await platformLog('backup.create', data.name, req.user, data.status);
-  res.status(201).json({ data });
-});
-router.get('/backups', async (_req, res) => {
-  const { data, error } = await adminDb.from('platform_backups').select('*').order('created_at', { ascending: false }).limit(100);
-  if (error) return res.status(500).json({ error: 'Could not load backups.' });
-  res.json({ data });
-});
-router.delete('/backups/:id', async (req, res) => {
-  const { error } = await adminDb.from('platform_backups').delete().eq('id', req.params.id);
-  if (error) return res.status(400).json({ error: 'Could not delete backup record.' });
-  await platformLog('backup.delete', req.params.id, req.user);
-  res.status(204).end();
+router.get('/settings', async (_req, res) => {
+  const { data } = await adminDb.from('platform_settings').select('*').eq('id', 1).maybeSingle();
+  const a = data?.app_settings || {};
+  res.json({ data: {
+    system_version: a.system_version || '1.0.0', maintenance_mode: !!a.maintenance_mode,
+    system_health: a.system_health || 'Healthy', contact_email: a.contact_email || null,
+    support_email: a.support_email || null, about: a.about || null,
+    footer_text: a.footer_text || null, copyright: a.copyright || null, visitors: a.visitors || 0
+  } });
 });
 
-const configSchema = z.object({
-  maintenance_mode: z.boolean().optional(),
-  system_health: z.string().max(50).optional(),
-  system_version: z.string().max(20).optional()
-});
-router.get('/config', async (_req, res) => {
-  const { data, error } = await adminDb.from('platform_config').select('*').limit(1).maybeSingle();
-  if (error) return res.status(400).json({ error: 'Could not load platform configuration.' });
-  res.json({ data });
-});
-
-router.get('/contributors', async (_req, res) => {
-  const { data, error } = await adminDb.from('contributors').select('*').order('created_at', { ascending: false });
-  if (error) return res.status(400).json({ error: 'Could not load contributors.' });
-  res.json({ data });
-});
-
-router.get('/help-articles', async (_req, res) => {
-  const { data, error } = await adminDb.from('help_articles').select('*').order('created_at', { ascending: false });
-  if (error) return res.status(400).json({ error: 'Could not load help articles.' });
-  res.json({ data });
-});
-
-router.get('/creator-profile', async (_req, res) => {
-  const { data, error } = await adminDb.from('creator_profiles').select('*').limit(1).maybeSingle();
-  if (error) return res.status(400).json({ error: 'Could not load creator profile.' });
-  res.json({ data });
-});
-
-router.patch('/organizations/:id', async (req, res) => {
-  const { suspended } = req.body || {};
-  if (typeof suspended !== 'boolean') return res.status(400).json({ error: 'suspended (boolean) is required.' });
-  const { data, error } = await adminDb.from('organizations')
-    .update({ suspended }).eq('id', req.params.id).select().single();
-  if (error) return res.status(400).json({ error: 'Could not update organization.' });
-  await adminDb.from('platform_audit_logs').insert({
-    action: suspended ? 'organization.suspend' : 'organization.unsuspend',
-    target: data.name, details: `Organization ${suspended ? 'suspended' : 'reactivated'}.`,
-    user_name: req.user.email, actor_id: req.user.id, result: 'Success'
-  });
-  res.json({ data });
-});
-
-router.patch('/config', async (req, res) => {
-  const parsed = configSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Invalid config update.' });
-  const { data: existing } = await adminDb.from('platform_config').select('id').limit(1).maybeSingle();
-  if (!existing) return res.status(404).json({ error: 'Platform config missing.' });
-  const { data, error } = await adminDb.from('platform_config').update({ ...parsed.data, updated_at: new Date().toISOString() }).eq('id', existing.id).select().single();
-  if (error) return res.status(400).json({ error: 'Could not update config.' });
-  await platformLog('config.update', 'platform_config', req.user, JSON.stringify(parsed.data));
-  res.json({ data });
-});
-
-// Content management (contributors, creator profile, help articles) — owner write, public read.
-router.put('/creator-profile', async (req, res) => {
+router.patch('/settings', async (req, res) => {
   const schema = z.object({
-    full_name: z.string().min(1).max(200), title: z.string().min(1).max(300),
-    biography: z.string().max(3000).default(''), photo_url: z.string().max(500).default(''),
-    social_links: z.record(z.unknown()).optional()
+    system_version: z.string().max(20).optional(), maintenance_mode: z.boolean().optional(),
+    system_health: z.string().max(40).optional(), contact_email: z.string().email().nullable().optional(),
+    support_email: z.string().email().nullable().optional(), about: z.string().max(20000).nullable().optional(),
+    footer_text: z.string().max(500).nullable().optional(), copyright: z.string().max(300).nullable().optional()
   });
   const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Invalid creator profile.' });
+  if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error, 'Invalid settings.') });
+  const { data: current } = await adminDb.from('platform_settings').select('app_settings').eq('id', 1).maybeSingle();
+  const merged = { ...(current?.app_settings || {}), ...parsed.data };
+  const { error } = await adminDb.from('platform_settings').update({ app_settings: merged }).eq('id', 1);
+  if (error) return res.status(400).json({ error: 'Could not save platform settings.' });
+  await adminDb.from('platform_audit_logs').insert({ action: 'settings.update', target: 'platform', details: JSON.stringify(parsed.data), user_name: req.user.email, actor_id: req.user.id, result: 'Success' });
+  res.json({ data: parsed.data });
+});
+
+// Owner profile (creator_profiles row 1) — displayed publicly as IRAKOZE Bright unless changed by the owner.
+router.get('/owner-profile', async (_req, res) => {
+  const { data } = await adminDb.from('creator_profiles').select('*').limit(1).maybeSingle();
+  res.json({ data: data || null });
+});
+
+router.put('/owner-profile', async (req, res) => {
+  const schema = z.object({
+    full_name: z.string().min(2).max(200), title: z.string().max(200).nullable().optional(),
+    biography: z.string().max(5000).nullable().optional(), photo_url: z.string().max(2000).nullable().optional(),
+    social_links: z.record(z.any()).nullable().optional()
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error, 'Invalid profile.') });
   const { data: existing } = await adminDb.from('creator_profiles').select('id').limit(1).maybeSingle();
-  const { data, error } = existing
-    ? await adminDb.from('creator_profiles').update(parsed.data).eq('id', existing.id).select().single()
-    : await adminDb.from('creator_profiles').insert(parsed.data).select().single();
-  if (error) return res.status(400).json({ error: 'Could not save creator profile.' });
-  await platformLog('creator_profile.update', data.id, req.user);
+  let data, error;
+  if (existing) ({ data, error } = await adminDb.from('creator_profiles').update(parsed.data).eq('id', existing.id).select().single());
+  else ({ data, error } = await adminDb.from('creator_profiles').insert(parsed.data).select().single());
+  if (error) return res.status(400).json({ error: 'Could not save the owner profile.' });
+  await adminDb.from('platform_audit_logs').insert({ action: 'owner_profile.update', target: 'platform', details: '', user_name: req.user.email, actor_id: req.user.id, result: 'Success' });
   res.json({ data });
 });
 
-const contributorSchema = z.object({
-  name: z.string().trim().min(1).max(200), photo_url: z.string().max(500).default(''),
-  role: z.string().max(200).default('Project Contributor'), contribution: z.string().max(500).default(''),
-  biography: z.string().max(2000).default(''), display_order: z.number().int().min(0).default(0)
-});
-router.post('/contributors', async (req, res) => {
-  const parsed = contributorSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Invalid contributor.' });
-  const { data, error } = await adminDb.from('contributors').insert(parsed.data).select().single();
-  if (error) return res.status(400).json({ error: 'Could not create contributor.' });
-  await platformLog('contributor.create', data.id, req.user, data.name);
-  res.status(201).json({ data });
-});
-router.delete('/contributors/:id', async (req, res) => {
-  const { error } = await adminDb.from('contributors').delete().eq('id', req.params.id);
-  if (error) return res.status(400).json({ error: 'Could not delete contributor.' });
-  await platformLog('contributor.delete', req.params.id, req.user);
-  res.status(204).end();
-});
+// Help articles + FAQs + contributors + support requests.
+const articleSchema = z.object({ category: z.string().max(80), title: z.string().min(3).max(200), content: z.string().min(3).max(20000), order_index: z.number().int().optional() });
 
-const helpSchema = z.object({
-  category: z.string().trim().min(1).max(100), title: z.string().trim().min(1).max(300),
-  content: z.string().max(10000).default(''), slug: z.string().max(120).default(''),
-  order_index: z.number().int().min(0).default(0)
+router.get('/help-articles', async (_req, res) => {
+  const { data } = await adminDb.from('help_articles').select('*').order('order_index').order('created_at');
+  res.json({ data: data || [] });
 });
 router.post('/help-articles', async (req, res) => {
-  const parsed = helpSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Invalid help article.' });
-  const { data, error } = await adminDb.from('help_articles')
-    .insert({ ...parsed.data, slug: parsed.data.slug || parsed.data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') }).select().single();
-  if (error) return res.status(400).json({ error: 'Could not create help article.' });
-  await platformLog('help_article.create', data.id, req.user, data.title);
+  const parsed = articleSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error, 'Invalid article.') });
+  const { data, error } = await adminDb.from('help_articles').insert(parsed.data).select().single();
+  if (error) return res.status(400).json({ error: 'Could not save the article.' });
   res.status(201).json({ data });
 });
 router.delete('/help-articles/:id', async (req, res) => {
-  const { error } = await adminDb.from('help_articles').delete().eq('id', req.params.id);
-  if (error) return res.status(400).json({ error: 'Could not delete help article.' });
-  await platformLog('help_article.delete', req.params.id, req.user);
-  res.status(204).end();
+  await adminDb.from('help_articles').delete().eq('id', req.params.id);
+  res.json({ data: { deleted: true } });
+});
+
+router.get('/support-requests', async (_req, res) => {
+  const { data } = await adminDb.from('support_requests').select('*').order('created_at', { ascending: false }).limit(200);
+  res.json({ data: data || [] });
+});
+router.patch('/support-requests/:id', async (req, res) => {
+  const status = ['open', 'in_progress', 'resolved', 'closed'].includes(req.body?.status) ? req.body.status : null;
+  if (!status) return res.status(400).json({ error: 'Invalid status.' });
+  const { data, error } = await adminDb.from('support_requests').update({ status }).eq('id', req.params.id).select().single();
+  if (error) return res.status(404).json({ error: 'Request not found.' });
+  res.json({ data });
+});
+
+router.get('/system-health', async (_req, res) => {
+  const t0 = Date.now();
+  const { error } = await adminDb.from('platform_settings').select('id').eq('id', 1).limit(1).maybeSingle();
+  const latency = Date.now() - t0;
+  const { data: settings } = await adminDb.from('platform_settings').select('app_settings').eq('id', 1).maybeSingle();
+  const [inst, people, inc, users] = await Promise.all([
+    adminDb.from('institutions').select('id', { count: 'exact', head: true }),
+    adminDb.from('people').select('id', { count: 'exact', head: true }),
+    adminDb.from('incidents').select('id', { count: 'exact', head: true }),
+    adminDb.from('profiles').select('id', { count: 'exact', head: true })
+  ]);
+  res.json({ data: {
+    database: error ? 'Unreachable' : 'Connected', latency_ms: latency,
+    maintenance_mode: !!settings?.app_settings?.maintenance_mode,
+    system_version: settings?.app_settings?.system_version || '1.0.0',
+    counts: { institutions: inst.count || 0, people: people.count || 0, incidents: inc.count || 0, users: users.count || 0 }
+  } });
 });
 
 export default router;
