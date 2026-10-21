@@ -168,6 +168,25 @@ export default function Landing() {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion || !('IntersectionObserver' in window)) return undefined;
+    const targets = Array.from(document.querySelectorAll('.dm-landing [data-reveal]'));
+    if (!targets.length) return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('dm-reveal-visible');
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -36px 0px' });
+    targets.forEach((target) => {
+      target.classList.add('dm-reveal-pending');
+      observer.observe(target);
+    });
+    return () => observer.disconnect();
+  }, []);
+
   const slide = SHOWCASES[activeShowcase];
   const showPrevious = () => setActiveShowcase((index) => (index - 1 + SHOWCASES.length) % SHOWCASES.length);
   const showNext = () => setActiveShowcase((index) => (index + 1) % SHOWCASES.length);
@@ -246,7 +265,7 @@ export default function Landing() {
       </section>
 
       {stats && (
-        <section className="dm-live-stats" aria-label="Live platform statistics">
+        <section className="dm-live-stats" aria-label="Live platform statistics" data-reveal>
           <div className="dm-live-stats-inner">
             <div><span className="dm-live-stat-value">{stats.institutions ?? stats.organizations ?? 0}</span><span className="dm-live-stat-label">Institutions</span></div>
             <div><span className="dm-live-stat-value">{stats.people ?? 0}</span><span className="dm-live-stat-label">People managed</span></div>
@@ -256,7 +275,7 @@ export default function Landing() {
         </section>
       )}
 
-      <section className="dm-section dm-showcase-section" id="product-preview">
+      <section className="dm-section dm-showcase-section" id="product-preview" data-reveal>
         <div className="dm-section-heading">
           <span className="dm-section-kicker">SEE THE WORKFLOW</span>
           <h2>One platform. <span className="dm-title-gradient">Clearer decisions.</span></h2>
@@ -292,7 +311,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="dm-section dm-tracks-section" id="tracks">
+      <section className="dm-section dm-tracks-section" id="tracks" data-reveal>
         <div className="dm-section-heading">
           <span className="dm-section-kicker">FIVE TRACKS · ONE STANDARD</span>
           <h2>Built around <span className="dm-title-gradient">your institution.</span></h2>
@@ -315,7 +334,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="dm-section dm-features-section" id="features">
+      <section className="dm-section dm-features-section" id="features" data-reveal>
         <div className="dm-section-heading">
           <span className="dm-section-kicker">BUILT FOR THE DETAILS</span>
           <h2>Everything connected.<br /><span className="dm-title-gradient">Nothing left unclear.</span></h2>
@@ -332,7 +351,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="dm-section dm-people-section">
+      <section className="dm-section dm-people-section" data-reveal>
         <div className="dm-people-heading">
           <div><span className="dm-section-kicker">PEOPLE-FIRST BY DESIGN</span><h2>Designed for the people <span className="dm-title-gradient">behind every record.</span></h2></div>
           <p>Illustrative profile examples across all five tracks. Real institution records remain private and are shown only to authorized users.</p>
@@ -340,7 +359,7 @@ export default function Landing() {
         <div className="dm-gallery-wrap"><MemberGallery members={SPOTLIGHT_MEMBERS} limit={10} showRoles={true} /></div>
       </section>
 
-      <section className="dm-final-cta">
+      <section className="dm-final-cta" data-reveal>
         <div className="dm-cta-glow" aria-hidden="true" />
         <div className="dm-final-cta-content">
           <span className="dm-section-kicker">READY TO GET ORGANIZED?</span>
