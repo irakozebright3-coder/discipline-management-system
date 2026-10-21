@@ -586,3 +586,44 @@
   .dm-public-navbar .dm-mobile-toggle { display: grid; }
   .dm-mobile-menu { display: flex; }
 }
+
+
+
+/* Public information pages inherit the DM midnight palette without changing the authenticated app theme. */
+.dm-public-page {
+  --background: 222 47% 7%;
+  --foreground: 210 40% 96%;
+  --card: 218 36% 12%;
+  --card-foreground: 210 40% 96%;
+  --primary: 258 90% 68%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 218 26% 17%;
+  --secondary-foreground: 210 40% 94%;
+  --muted: 218 26% 16%;
+  --muted-foreground: 215 18% 67%;
+  --accent: 255 35% 21%;
+  --accent-foreground: 250 95% 88%;
+  --destructive: 0 66% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 218 24% 23%;
+  --input: 218 24% 23%;
+  --ring: 258 90% 68%;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+.dm-public-content { min-width: 0; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+.dm-public-content input, .dm-public-content textarea, .dm-public-content select { color: hsl(var(--foreground)); }
+.dm-public-content input::placeholder, .dm-public-content textarea::placeholder { color: hsl(var(--muted-foreground)); opacity: 1; }
+.dm-contact-honeypot {
+  position: absolute !important;
+  left: -10000px !important;
+  top: auto !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+.dm-public-content details > summary::-webkit-details-marker { display: none; }
+.dm-public-content details > summary { list-style: none; }
+.dm-public-content details > summary:focus-visible { outline-offset: 4px; }
+.dm-public-content .text-destructive { color: #fca5a5; }
+.dm-public-content .text-emerald-700 { color: #6ee7b7; }
