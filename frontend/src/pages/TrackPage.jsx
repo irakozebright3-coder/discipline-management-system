@@ -3,7 +3,7 @@ import { ArrowRight, GraduationCap, School, Briefcase, HeartHandshake, Users, Ch
 import { Button } from '../components/ui/button.jsx';
 import { Card, CardContent } from '../components/ui/card.jsx';
 import MemberGallery from '../components/MemberGallery.jsx';
-import { TRACKS, trackByPath, membersByTrack } from '../lib/memberGallery.js';
+import { TRACKS, WELCOME_MEMBERS, trackByPath, membersByTrack } from '../lib/memberGallery.js';
 
 const TRACK_ICONS = {
   HIGH_SCHOOL: School, UNIVERSITY: GraduationCap, COMPANY: Briefcase,
