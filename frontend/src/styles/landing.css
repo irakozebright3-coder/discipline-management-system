@@ -525,3 +525,58 @@
   .dm-hero-glass-card, .dm-hero-visual:hover .dm-hero-glass-card { transform: none; }
   .dm-hero-ring, .dm-orb, .dm-float-card { animation: none !important; }
 }
+
+
+/* Public and authentication-shell refinements. */
+.dm-public-navbar .dm-nav-brand .text-foreground { color: #f8fafc !important; }
+.dm-public-navbar .dm-nav-brand .bg-primary { color: #fff !important; }
+.dm-public-navbar .dm-nav-cta-link {
+  display: inline-flex; min-height: 36px; align-items: center; justify-content: center;
+  padding: .55rem .85rem; border-radius: 10px; color: #fff !important;
+  background: linear-gradient(110deg,#7c3aed,#4f46e5,#2563eb);
+  box-shadow: 0 8px 20px rgba(79,70,229,.18);
+  font-size: .78rem; font-weight: 750; white-space: nowrap;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.dm-public-navbar .dm-nav-cta-link:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(79,70,229,.28); }
+.dm-public-navbar .dm-nav-ghost { display: inline-flex; align-items: center; justify-content: center; padding: .55rem .65rem; color: #dbe4f0 !important; font-size: .82rem; font-weight: 600; }
+.dm-public-navbar .dm-nav-ghost:hover { color: #c4b5fd !important; }
+.dm-public-footer .dm-footer-brand { color: #e2e8f0 !important; }
+.dm-public-footer .dm-footer-brand .text-foreground { color: #e2e8f0 !important; }
+
+.dm-auth-layout { position: relative; overflow: hidden; color: hsl(var(--foreground)); }
+.dm-auth-visual {
+  position: relative; isolation: isolate; overflow: hidden; min-width: 0;
+  background:
+    radial-gradient(ellipse at 82% 12%,rgba(59,130,246,.23),transparent 34%),
+    radial-gradient(ellipse at 18% 86%,rgba(139,92,246,.3),transparent 40%),
+    linear-gradient(145deg,#11172a,#0b0f19 68%);
+  border-right: 1px solid rgba(148,163,184,.13);
+}
+.dm-auth-visual > a, .dm-auth-visual-copy, .dm-auth-bottom { position: relative; z-index: 1; }
+.dm-auth-visual > a .text-foreground { color: #f8fafc !important; }
+.dm-auth-visual-copy { max-width: 590px; margin: auto 0; padding: 4rem 0; }
+.dm-auth-eyebrow { display: inline-flex; align-items: center; gap: .5rem; padding: .5rem .7rem; border: 1px solid rgba(167,139,250,.24); border-radius: 999px; color: #c4b5fd; background: rgba(139,92,246,.1); font-size: .7rem; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+.dm-auth-visual-copy h1 { margin: 1.5rem 0 1rem; color: #f8fafc; font-size: clamp(3rem,5vw,5rem); font-weight: 780; line-height: .99; letter-spacing: -.065em; }
+.dm-auth-visual-copy h1 span { color: transparent; background: linear-gradient(105deg,#c4b5fd,#60a5fa); -webkit-background-clip: text; background-clip: text; }
+.dm-auth-visual-copy p { max-width: 490px; color: #a8b4c8; font-size: 1rem; line-height: 1.85; }
+.dm-auth-benefit-list { display: flex; flex-direction: column; gap: .8rem; margin-top: 1.7rem; color: #cbd5e1; font-size: .82rem; }
+.dm-auth-benefit-list span { display: flex; align-items: center; gap: .6rem; }
+.dm-auth-benefit-list svg { color: #34d399; }
+.dm-auth-bottom { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: #74839a; font-size: .62rem; letter-spacing: .06em; }
+.dm-auth-bottom span:last-child { display: flex; align-items: center; gap: .4rem; letter-spacing: 0; }
+.dm-auth-visual-orb { position: absolute; right: -170px; bottom: -180px; z-index: 0; width: 470px; height: 470px; border: 1px solid rgba(167,139,250,.18); border-radius: 50%; box-shadow: 0 0 0 45px rgba(139,92,246,.025),0 0 0 90px rgba(59,130,246,.025); pointer-events: none; }
+.dm-auth-main { position: relative; display: flex; flex: 1; min-width: 0; align-items: center; justify-content: center; padding: clamp(1.5rem,4vw,4rem); background: hsl(var(--background)); }
+.dm-auth-form-wrap { width: 100%; max-width: 440px; }
+.dm-auth-mobile-brand { margin-bottom: 2.25rem; }
+.dm-auth-footnote { margin-top: 2rem; color: hsl(var(--muted-foreground)); font-size: .72rem; line-height: 1.65; text-align: center; }
+@media (max-width: 1023px) {
+  .dm-auth-main { min-height: 100vh; }
+}
+@media (max-width: 760px) {
+  .dm-public-navbar .dm-nav-actions .dm-nav-ghost { display: none; }
+  .dm-public-navbar .dm-nav-actions .dm-nav-cta-link { min-height: 34px; padding: .5rem .65rem; font-size: .72rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dm-public-navbar .dm-nav-cta-link:hover { transform: none; }
+}
