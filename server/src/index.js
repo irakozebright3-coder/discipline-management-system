@@ -27,5 +27,11 @@ app.use((err, _req, res, _next) => {
   console.error('Unhandled API error:', err?.message || 'unknown error');
   res.status(500).json({ error: 'Internal server error.' });
 });
+// On Vercel the Express app runs as a serverless function (api/index.js),
+// so we only bind a local port when NOT running there.
 const port = Number(process.env.PORT || 4000);
-app.listen(port, () => console.log(`SDMS API listening on port ${port}`));
+if (!process.env.VERCEL) {
+  app.listen(port, () => console.log(`SDMS API listening on port ${port}`));
+}
+
+export default app;

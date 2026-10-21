@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js';
 
-const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+// Leave VITE_API_BASE_URL empty in production to use the same origin (Vercel hosts the API too).
+const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
 export async function apiRequest(path, options = {}) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) throw new Error('Please sign in before continuing.');
