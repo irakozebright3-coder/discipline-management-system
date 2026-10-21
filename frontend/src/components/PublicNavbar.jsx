@@ -9,7 +9,9 @@ const links = [
   { to: '/tracks/high-school', label: 'Tracks' },
   { to: '/about', label: 'About' },
   { to: '/community', label: 'Community' },
-  { to: '/help', label: 'Help Center' }
+  { to: '/help', label: 'Help Center' },
+  { to: '/faqs', label: 'FAQs' },
+  { to: '/contact', label: 'Contact' }
 ];
 
 function PublicLinks({ mobile = false, onNavigate }) {
