@@ -8,11 +8,11 @@ export default function About() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-12">
-      <h1 className="text-3xl font-bold">About SDMS</h1>
+      <h1 className="text-3xl font-bold">About Discipline Management</h1>
       <Card>
         <CardHeader><CardTitle>Our mission</CardTitle></CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">Every institution deserves transparent, fair discipline management. SDMS records conduct incidents, deducts marks consistently, and keeps a full audit trail — so decisions about students, employees, and members are based on facts, not memory.</p>
+          <p className="text-muted-foreground">Every institution deserves transparent, fair discipline management. Discipline Management records conduct incidents, deducts marks consistently, and keeps a full audit trail — so decisions about students, employees, and members are based on facts, not memory.</p>
         </CardContent>
       </Card>
       {creator && (

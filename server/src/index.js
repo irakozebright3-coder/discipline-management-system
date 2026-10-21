@@ -49,7 +49,7 @@ app.use((err, _req, res, _next) => {
 // so we only bind a local port when NOT running there.
 const port = Number(process.env.PORT || 4000);
 if (!process.env.VERCEL) {
-  app.listen(port, () => console.log(`SDMS API listening on port ${port}`));
+  app.listen(port, () => console.log(`Discipline Management API listening on port ${port}`));
 }
 
 export default app;

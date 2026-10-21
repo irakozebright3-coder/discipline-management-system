@@ -3,7 +3,9 @@ import Sidebar from './Sidebar.jsx';
 import { useOrg } from '../hooks/useOrg.jsx';
 
 export default function Layout() {
-  const { orgs } = useOrg();
+  const { orgs, orgsLoaded } = useOrg();
+  // Wait until organizations are loaded, otherwise users with a team get bounced to /setup.
+  if (!orgsLoaded) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading…</div>;
   // No organization yet: the app is unusable until setup completes.
   if (orgs.length === 0) return <Navigate to="/setup" replace />;
 

@@ -1,4 +1,4 @@
-# Discipline Management System (SDMS)
+# Discipline Management
 
 Multi-tenant discipline tracking: organizations manage people, a violations catalog, and incidents with marks deduction, status workflow, and an audit trail. React frontend, Node.js/Express API, Supabase Auth and Supabase PostgreSQL.
 

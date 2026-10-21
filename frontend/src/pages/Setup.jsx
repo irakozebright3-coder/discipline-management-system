@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { setupOrganization } from '../lib/api.js';
+import { Navigate } from 'react-router-dom';
+import { useOrg } from '../hooks/useOrg.jsx';
 import { TRACK_LABELS } from '../lib/discipline.js';
 import { Button } from '../components/ui/button.jsx';
 import { Input } from '../components/ui/input.jsx';
@@ -9,11 +11,15 @@ import { Select } from '../components/ui/select.jsx';
 import SdmsLogo from '../components/SdmsLogo.jsx';
 
 export default function Setup() {
+  const { orgs, orgsLoaded, refresh } = useOrg();
   const [name, setName] = useState('');
   const [track, setTrack] = useState('HIGH_SCHOOL');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
+
+  // Users who already manage a team go straight to it — never stuck here.
+  if (orgsLoaded && orgs.length > 0) return <Navigate to="/dashboard" replace />;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -22,8 +28,9 @@ export default function Setup() {
     setBusy(true);
     try {
       await setupOrganization(name.trim(), track);
+      // Land directly on the newly created team.
+      await refresh();
       navigate('/dashboard', { replace: true });
-      window.location.reload();
     } catch (err) { setError(err.message); } finally { setBusy(false); }
   };
 

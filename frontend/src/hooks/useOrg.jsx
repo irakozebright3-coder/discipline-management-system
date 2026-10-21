@@ -7,11 +7,12 @@ const OrgContext = createContext(null);
 export function OrgProvider({ children }) {
   const { session } = useAuth();
   const [orgs, setOrgs] = useState([]);
+  const [orgsLoaded, setOrgsLoaded] = useState(false);
   const [activeOrgId, setActiveOrgId] = useState(localStorage.getItem('sdms.org') || '');
 
   useEffect(() => {
     let cancelled = false;
-    if (!session?.user?.id) { setOrgs([]); return; }
+    if (!session?.user?.id) { setOrgs([]); setOrgsLoaded(true); return; }
     (async () => {
       try {
         const { data } = await listOrganizations();
@@ -27,19 +28,34 @@ export function OrgProvider({ children }) {
           });
         }
       } catch { if (!cancelled) setOrgs([]); }
+      finally { if (!cancelled) setOrgsLoaded(true); }
     })();
     return () => { cancelled = true; };
   }, [session?.user?.id]);
 
+  const pickActive = (list) => {
+    setActiveOrgId(prev => {
+      const stillValid = list.some(m => m.organization.id === prev);
+      const next = stillValid ? prev : (list[0]?.organization.id || '');
+      if (next) localStorage.setItem('sdms.org', next);
+      return next;
+    });
+  };
+
   const value = {
     orgs,
+    orgsLoaded,
     membership: orgs.find(m => m.organization.id === activeOrgId) || null,
     organization: orgs.find(m => m.organization.id === activeOrgId)?.organization || null,
     orgId: activeOrgId,
     setActiveOrg: (id) => { setActiveOrgId(id); if (id) localStorage.setItem('sdms.org', id); },
     refresh: async () => {
       const { data } = await listOrganizations();
-      setOrgs(data || []);
+      const list = data || [];
+      setOrgs(list);
+      pickActive(list);
+      setOrgsLoaded(true);
+      return list;
     }
   };
   return <OrgContext.Provider value={value}>{children}</OrgContext.Provider>;

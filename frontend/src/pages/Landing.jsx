@@ -21,7 +21,7 @@ export default function Landing() {
       <div className="text-center">
         {creator && <div className="mb-6 flex justify-center"><CreatorBadge name={creator.full_name} title={creator.title} /></div>}
         <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
-          Discipline Management <span className="text-primary">System</span>
+          Discipline <span className="text-primary">Management</span>
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
           A complete platform for tracking conduct, violations, and discipline marks — for schools, universities, companies, organizations, and communities.
