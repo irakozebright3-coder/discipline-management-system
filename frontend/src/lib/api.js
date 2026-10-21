@@ -52,9 +52,14 @@ export const platformPatch = (path, body) => apiRequest(`/api/platform/${path}`,
 export const platformDelete = (path) => apiRequest(`/api/platform/${path}`, { method: 'DELETE' });
 
 // ---------- Public content (no sign-in needed) ----------
-async function publicRequest(path) {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
-  const response = await fetch(`${baseUrl}/api/public${path}`);
+async function publicRequest(path, options = {}) {
+  const response = await fetch(`${baseUrl}/api/public${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
   return body;
@@ -63,4 +68,9 @@ export const getCommunityStats = () => publicRequest('/stats');
 export const getContributors = () => publicRequest('/contributors');
 export const getCreatorProfile = () => publicRequest('/creator-profile');
 export const getHelpArticles = () => publicRequest('/help-articles');
+export const getFaqs = () => publicRequest('/faqs');
+export const submitSupportRequest = (payload) => publicRequest('/support', {
+  method: 'POST',
+  body: JSON.stringify(payload)
+});
 export const getSubscriptionPlans = () => publicRequest('/subscription-plans');

@@ -15,6 +15,8 @@ import TrackPage from './pages/TrackPage.jsx';
 import About from './pages/About.jsx';
 import Community from './pages/Community.jsx';
 import HelpCenter from './pages/HelpCenter.jsx';
+import Contact from './pages/Contact.jsx';
+import Faqs from './pages/Faqs.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
@@ -40,7 +42,7 @@ import Backups from './pages/platform/Backups.jsx';
 import SystemControl from './pages/platform/SystemControl.jsx';
 
 function PublicPage({ children }) {
-  return <div className="flex min-h-screen flex-col"><PublicNavbar /><div className="flex-1">{children}</div><PublicFooter /></div>;
+  return <div className="dm-public-page flex min-h-screen flex-col"><PublicNavbar /><div className="dm-public-content flex-1">{children}</div><PublicFooter /></div>;
 }
 
 export default function App() {
@@ -55,6 +57,8 @@ export default function App() {
           <Route path="/tracks/:track" element={<PublicPage><TrackPage /></PublicPage>} />
           <Route path="/community" element={<PublicPage><Community /></PublicPage>} />
           <Route path="/help" element={<PublicPage><HelpCenter /></PublicPage>} />
+          <Route path="/faqs" element={<PublicPage><Faqs /></PublicPage>} />
+          <Route path="/contact" element={<PublicPage><Contact /></PublicPage>} />
 
           {/* Auth */}
           <Route element={<AuthLayout />}>
