@@ -5,23 +5,50 @@ Multi-tenant discipline tracking: organizations manage people, a violations cata
 ## Repository layout
 - `frontend/` — runnable Vite + Vue 3 app: sign in/up, organization picker, overview, people, incidents, violations and admin pages, with a liquid-button design system, sliding-word titles, clustering-word canvas backdrop, 3D card tilt and view entrances, and reduced-motion fallbacks.
 - `server/` — Express API with Supabase JWT validation, organization-scoped routes for persons, incidents, violations and organizations, plus audit logging.
-- `supabase/migrations/` — PostgreSQL schema with row-level security policies.
+- `supabase/migrations/` — PostgreSQL schema with row-level security policies:
+  - `001_initial_schema.sql` — base schema (organizations, members, persons, violations, incidents, audit log).
+  - `002_spec_features.sql` — person spec fields (term marks, guardian, class/trade), violation category, structure nodes, public content, subscription plans, platform console tables.
+  - `003_fixes.sql` — violation `track` column and the `on_auth_user_created` profile trigger.
+  - `004_incident_confirmation.sql` — incident `confirmed` / `remaining_marks` / `month` columns and indexes.
 - `docs/architecture-and-deployment.md` — deployment outline, migration checklist and security requirements.
 - `.github/workflows/ci.yml` — CI: API syntax + boot smoke test and frontend production build.
 
 ## Features
 - Email/password auth with Supabase; users see only organizations they belong to.
-- Motion design system: liquid primary buttons, sliding-word headings, a clustering-words canvas on the login hero, 3D tilt cards and depth entrances — all disabled automatically under `prefers-reduced-motion`.
+- Motion design system: liquid primary buttons, sliding-word headings, a clustering-words canvas on the public hero, 3D tilt cards and depth entrances — all disabled automatically under `prefers-reduced-motion`.
 - Footer copyright year updates itself when the year rolls over.
-- People management per organization (status workflow, admin-only deletes).
-- Violations catalog per organization (admin-managed, with default marks).
-- Incident recording with severity, marks deducted, location, witnesses, counselling and action taken.
-- Incident status workflow: Reported → Under Review → Confirmed → Resolved / Appealed / Closed.
+- **Public pages** (no sign-in): landing with live community stats, About, Community (contributors + creator profile), Help Center (articles by category).
+- **Organization setup**: a signed-in user with no organization creates one at `/setup` (name + discipline track); default violations for the track are seeded automatically and the creator becomes `org_admin`.
+- **People / Students** per track, with HIGH_SCHOOL fields (class, trade, term marks, optional parent/guardian name + international phone validated against `^\+?[1-9]\d{6,14}$`, trimmed before save). Legacy `guardian_contact` is preserved.
+- **Student score card**: profile, discipline card (term marks, annual score /120, annual percentage, rating), guardian card with an empty state, incident history, inline edit, and "move class".
+- **Structure**: track-adapted organization nodes — trades/classes (high school), faculties/departments/programs/years (university), departments/offices/roles (company, organization, community).
+- **Violations catalog** per organization with category and default marks deduction.
+- **Incidents**: severity, marks deducted, location, witnesses, counselling, action taken, status workflow (Reported → Under Review → Confirmed → Resolved / Appealed / Closed). Confirming an incident deducts its marks from the person's term marks, clamps at 0, records `remaining_marks`, and never deducts twice.
+- **History** with search and status/term filters. **Reports** with term/severity/top-violation summaries, a discipline watchlist, and CSV export.
+- **Settings** with organization details and the full audit trail.
+- **Platform owner console**: dashboard stats, organizations, users, platform + organization audit logs, backup records, system config (maintenance mode, version, health), and content management (creator profile, contributors, help articles).
 - Role-based access: `platform_owner`, `org_admin`, `teacher`, `staff`, `viewer`. Writes require teacher/staff/admin; deletes and catalog management require admin.
-- Every create, update and delete is written to `audit_logs`.
+- Every create, update and delete is written to `audit_logs`; platform actions go to `platform_audit_logs`.
+
+## Platform owner access
+Priority order:
+1. `PLATFORM_OWNER_EMAILS` environment variable (comma-separated emails).
+2. `platform_config.app_settings.owner_ids` (user ids).
+3. A `platform_owner` role in `organization_members`.
+4. First-user bootstrap: on a fresh install with no owner configured anywhere, the first authenticated user to open the platform console claims ownership (recorded in `app_settings` and the platform audit log).
+
+## Discipline calculations (fixed rules)
+- `HS_MAX = 40` per term, `HS_ANNUAL_MAX = 120`.
+- Missing term marks count as 40.
+- Annual score = term1 + term2 + term3; annual percentage = annual / 120 × 100.
+- Confirming an incident deducts `marks_deducted` from that term, clamped at 0.
+
+## Default violations seeded on setup
+- HIGH_SCHOOL: Late coming (2, Attendance), Unauthorized absence (3, Attendance), Disrespect (4, Conduct), Fighting (5, Conduct), Uniform violation (1, Appearance).
+- Other tracks: Misconduct (Conduct), Insubordination (Conduct), Policy violation (Policy), Absenteeism (Attendance) — all 0 marks.
 
 ## Local development
-1. Create a Supabase project (free tier is fine) and apply `supabase/migrations/001_initial_schema.sql` in the SQL editor.
+1. Create a Supabase project (free tier is fine) and apply the migrations in `supabase/migrations/` in order (001 → 004).
 2. In Supabase Auth, enable the Email provider. Create a first user, then insert an organization and your membership:
    ```sql
    insert into public.organizations (name, type, track, created_by)

@@ -8,12 +8,28 @@ const personSchema = z.object({
   organization_id: z.string().uuid(), track: z.enum(['HIGH_SCHOOL','UNIVERSITY','COMPANY','ORGANIZATION','COMMUNITY']),
   full_name: z.string().trim().min(1).max(200), person_id: z.string().trim().min(1).max(100),
   gender: z.enum(['Male','Female','Other']).optional(), date_of_birth: z.string().date().optional(),
+  photo_url: z.string().max(500).optional(),
+  trade_id: z.string().max(100).nullable().optional(), class_id: z.string().max(100).nullable().optional(),
+  department_id: z.string().max(100).nullable().optional(), office_id: z.string().max(100).nullable().optional(),
   guardian_contact: z.string().max(200).optional(), academic_year: z.string().max(30).optional(),
+  guardian_name: z.string().max(200).optional(), guardian_phone: z.string().max(20).optional(),
+  term1_marks: z.number().min(0).max(40).optional(), term2_marks: z.number().min(0).max(40).optional(),
+  term3_marks: z.number().min(0).max(40).optional(),
   faculty: z.string().max(200).optional(), academic_department: z.string().max(200).optional(),
   program: z.string().max(200).optional(), year_of_study: z.string().max(50).optional(),
   cohort: z.string().max(100).optional(), role: z.string().max(100).optional(), date_joined: z.string().date().optional(),
   status: z.enum(['Active','Suspended','Inactive','Under Review']).optional()
 });
+const PHONE_RE = /^\+?[1-9]\d{6,14}$/;
+function validateGuardian(body) {
+  if (body.guardian_name !== undefined) body.guardian_name = String(body.guardian_name).trim();
+  if (body.guardian_phone !== undefined) {
+    body.guardian_phone = String(body.guardian_phone).trim();
+    if (body.guardian_phone && !PHONE_RE.test(body.guardian_phone)) return 'Guardian phone must be a valid international number (e.g. +2507...).';
+  }
+  return null;
+}
+
 router.get('/', requireOrganizationRole, async (req, res) => {
   const limit = Math.min(Math.max(Number.parseInt(req.query.limit || '50', 10) || 50, 1), 100);
   const { data, error } = await adminDb.from('persons').select('*').eq('organization_id', req.organizationId).order('full_name').limit(limit);
@@ -23,6 +39,8 @@ router.get('/', requireOrganizationRole, async (req, res) => {
 router.post('/', requireOrganizationRole, requireWriteRole, async (req, res) => {
   const parsed = personSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid person data.', details: parsed.error.flatten() });
+  const phoneError = validateGuardian(parsed.data);
+  if (phoneError) return res.status(400).json({ error: phoneError });
   if (parsed.data.organization_id !== req.organizationId) return res.status(403).json({ error: 'Organization mismatch.' });
   const { data, error } = await adminDb.from('persons').insert({ ...parsed.data, created_by: req.user.id }).select().single();
   if (error) return res.status(error.code === '23505' ? 409 : 400).json({ error: error.code === '23505' ? 'This person ID already exists in the organization.' : 'Could not create person.' });
@@ -55,6 +73,8 @@ router.patch('/:id', requireOrganizationRole, requireWriteRole, async (req, res)
   }
   const parsed = personUpdateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid person update.', details: parsed.error.flatten() });
+  const phoneError = validateGuardian(parsed.data);
+  if (phoneError) return res.status(400).json({ error: phoneError });
   if (Object.keys(parsed.data).length === 0) return res.status(400).json({ error: 'No valid fields to update.' });
   const { data, error } = await adminDb.from('persons').update(parsed.data).eq('id', person.id).select().single();
   if (error) return res.status(error.code === '23505' ? 409 : 400).json({ error: error.code === '23505' ? 'This person ID already exists in the organization.' : 'Could not update person.' });

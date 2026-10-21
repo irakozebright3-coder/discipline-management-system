@@ -8,6 +8,7 @@ const router = Router();
 const violationSchema = z.object({
   organization_id: z.string().uuid(),
   name: z.string().trim().min(1).max(200),
+  track: z.enum(['HIGH_SCHOOL','UNIVERSITY','COMPANY','ORGANIZATION','COMMUNITY']).optional(),
   description: z.string().trim().max(2000).optional(),
   severity: z.enum(['Minor', 'Moderate', 'Serious', 'N/A']).optional(),
   default_marks_deducted: z.number().min(0).max(100000).optional(),

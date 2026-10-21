@@ -206,3 +206,38 @@ tbody tr:nth-child(n+6) { animation-delay: 0.17s; }
   }
   .tilt-card { transform: none !important; }
 }
+
+/* ===== Spec-feature additions ===== */
+.filter-row { display: flex; gap: 0.75rem; flex-wrap: wrap; margin: 1rem 0; align-items: center; }
+.filter-row .search { max-width: 320px; }
+.tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.track-list { list-style: none; padding: 0; }
+.track-list li { padding: 0.3rem 0; border-bottom: 1px solid var(--border, #2a2a2a); }
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.card.stat { display: flex; flex-direction: column; gap: 0.35rem; }
+.card.stat strong { font-size: 1.6rem; }
+.creator-card, .hero { text-align: left; }
+.hero { display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+.hero .lead { max-width: 46rem; }
+.cta-row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.setup-card { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem; }
+.setup-form { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.discipline-card { display: flex; flex-direction: column; gap: 0.75rem; }
+.term-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+.term { display: flex; flex-direction: column; gap: 0.25rem; }
+.term .bar { height: 8px; border-radius: 6px; background: var(--muted, #262626); overflow: hidden; }
+.term .bar-fill { height: 100%; border-radius: 6px; background: var(--accent, #f59e0b); transition: width 0.4s ease; }
+.annual { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.annual div { display: flex; flex-direction: column; gap: 0.25rem; }
+.pill.good, .pill.ok { color: #34d399; }
+.pill.warn { color: #fbbf24; }
+.pill.bad { color: #f87171; }
+
+.form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+.form-grid label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; }
+@media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } .term-row { grid-template-columns: 1fr; } }
+
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.dialog { max-width: 420px; width: calc(100% - 2rem); display: flex; flex-direction: column; gap: 0.75rem; }
+.strong { font-weight: 600; }

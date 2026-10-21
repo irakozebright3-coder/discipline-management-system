@@ -9,8 +9,10 @@ const incidentSchema = z.object({
   person_id: z.string().uuid(), term: z.enum(['1','2','3']).optional(), violation_id: z.string().uuid().nullable().optional(),
   violation_name: z.string().max(200).optional(), reason: z.string().max(1000).optional(), description: z.string().max(10000).optional(),
   severity: z.enum(['Minor','Moderate','Serious','N/A']).optional(), marks_deducted: z.number().min(0).max(100000).optional(),
-  remaining_marks: z.number().nullable().optional(), incident_date: z.string().date(), location: z.string().max(300).optional(),
+  remaining_marks: z.number().nullable().optional(), incident_date: z.string().date(),
+  month: z.string().max(20).optional(), location: z.string().max(300).optional(),
   status: z.enum(['Reported','Under Review','Confirmed','Resolved','Appealed','Closed']).optional(),
+  confirmed: z.boolean().optional(),
   evidence_url: z.string().max(2000).optional(), witnesses: z.string().max(3000).optional(), counselling: z.string().max(5000).optional(),
   action_taken: z.string().max(5000).optional(), recorded_by: z.string().max(200).optional()
 });
@@ -64,6 +66,7 @@ const incidentUpdateSchema = z.object({
   incident_date: z.string().date().optional(),
   location: z.string().max(300).optional(),
   status: z.enum(['Reported','Under Review','Confirmed','Resolved','Appealed','Closed']).optional(),
+  confirmed: z.boolean().optional(),
   evidence_url: z.string().max(2000).optional(),
   witnesses: z.string().max(3000).optional(),
   counselling: z.string().max(5000).optional(),
@@ -79,9 +82,24 @@ router.patch('/:id', requireOrganizationRole, requireWriteRole, async (req, res)
   const parsed = incidentUpdateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid incident update.', details: parsed.error.flatten() });
   if (Object.keys(parsed.data).length === 0) return res.status(400).json({ error: 'No valid fields to update.' });
+  // Discipline marks: when an incident becomes confirmed, deduct its marks from
+  // the person's term marks (clamped at 0) and record the remaining amount.
+  const newlyConfirmed = parsed.data.confirmed === true && incident.confirmed !== true;
+  if (newlyConfirmed) {
+    const { data: person } = await adminDb.from('persons').select('id, term1_marks, term2_marks, term3_marks')
+      .eq('id', incident.person_id).maybeSingle();
+    if (person) {
+      const termField = { '1': 'term1_marks', '2': 'term2_marks', '3': 'term3_marks' }[parsed.data.term || incident.term || '1'];
+      const current = Number(person[termField] ?? 40);
+      const deduct = Number(parsed.data.marks_deducted ?? incident.marks_deducted ?? 0);
+      const remaining = Math.max(0, current - deduct);
+      await adminDb.from('persons').update({ [termField]: remaining }).eq('id', person.id);
+      parsed.data.remaining_marks = remaining;
+    }
+  }
   const { data, error } = await adminDb.from('incidents').update(parsed.data).eq('id', incident.id).select().single();
   if (error) return res.status(400).json({ error: 'Could not update incident.' });
-  await adminDb.from('audit_logs').insert({ organization_id: req.organizationId, actor_id: req.user.id, action: 'update', entity_type: 'incident', entity_id: data.id, details: { changes: parsed.data } });
+  await adminDb.from('audit_logs').insert({ organization_id: req.organizationId, actor_id: req.user.id, action: newlyConfirmed ? 'confirm' : 'update', entity_type: 'incident', entity_id: data.id, details: { changes: parsed.data } });
   res.json({ data });
 });
 

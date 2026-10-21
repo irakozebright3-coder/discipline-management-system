@@ -32,3 +32,35 @@ export const listViolations = (organizationId) => apiRequest(`/api/violations?or
 export const createViolation = (violation) => apiRequest('/api/violations', { method: 'POST', body: JSON.stringify(violation) });
 export const updateViolation = (id, changes, organizationId) => apiRequest(`/api/violations/${id}?organization_id=${encodeURIComponent(organizationId)}`, { method: 'PATCH', body: JSON.stringify(changes) });
 export const deleteViolation = (id, organizationId) => apiRequest(`/api/violations/${id}?organization_id=${encodeURIComponent(organizationId)}`, { method: 'DELETE' });
+
+// ---------- Organization setup ----------
+export const setupOrganization = (name, track) => apiRequest('/api/organizations', { method: 'POST', body: JSON.stringify({ name, track }) });
+
+// ---------- Structure nodes ----------
+export const listStructureNodes = (organizationId) => apiRequest(`/api/structure?organization_id=${encodeURIComponent(organizationId)}`);
+export const createStructureNode = (node) => apiRequest('/api/structure', { method: 'POST', body: JSON.stringify(node) });
+export const updateStructureNode = (id, changes, organizationId) => apiRequest(`/api/structure/${id}?organization_id=${encodeURIComponent(organizationId)}`, { method: 'PATCH', body: JSON.stringify(changes) });
+export const deleteStructureNode = (id, organizationId) => apiRequest(`/api/structure/${id}?organization_id=${encodeURIComponent(organizationId)}`, { method: 'DELETE' });
+
+// ---------- Audit logs ----------
+export const listAuditLogs = (organizationId) => apiRequest(`/api/audit-logs?organization_id=${encodeURIComponent(organizationId)}`);
+
+// ---------- Platform owner console ----------
+export const platformGet = (path) => apiRequest(`/api/platform/${path}`);
+export const platformPost = (path, body) => apiRequest(`/api/platform/${path}`, { method: 'POST', body: JSON.stringify(body || {}) });
+export const platformPatch = (path, body) => apiRequest(`/api/platform/${path}`, { method: 'PATCH', body: JSON.stringify(body) });
+export const platformDelete = (path) => apiRequest(`/api/platform/${path}`, { method: 'DELETE' });
+
+// ---------- Public content (no sign-in needed) ----------
+async function publicRequest(path) {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
+  const response = await fetch(`${baseUrl}/api/public${path}`);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
+  return body;
+}
+export const getCommunityStats = () => publicRequest('/community-stats');
+export const getContributors = () => publicRequest('/contributors');
+export const getCreatorProfile = () => publicRequest('/creator-profile');
+export const getHelpArticles = () => publicRequest('/help-articles');
+export const getSubscriptionPlans = () => publicRequest('/subscription-plans');

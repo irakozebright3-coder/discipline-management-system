@@ -1,42 +1,51 @@
 <script setup>
-import { ref, watch } from 'vue';
-import { listPersons, createPerson, updatePerson, deletePerson } from '../lib/api.js';
+import { ref, computed, watch } from 'vue';
+import { listPersons, createPerson, updatePerson, deletePerson, listStructureNodes } from '../lib/api.js';
+import PersonForm from '../components/PersonForm.vue';
 import LiquidButton from '../components/LiquidButton.vue';
 
-const props = defineProps({ orgId: String, canWrite: Boolean, isAdmin: Boolean });
+const props = defineProps({ orgId: String, track: String, canWrite: Boolean, isAdmin: Boolean });
+const emit = defineEmits(['open-student']);
 
 const STATUSES = ['Active', 'Suspended', 'Inactive', 'Under Review'];
-const EMPTY = () => ({ full_name: '', person_id: '', gender: '', status: 'Active', guardian_contact: '', academic_year: '' });
-
 const rows = ref(null);
+const classes = ref([]);
+const trades = ref([]);
 const search = ref('');
+const statusFilter = ref('');
 const adding = ref(false);
-const form = ref(EMPTY());
 const error = ref('');
 const notice = ref('');
-const busy = ref(false);
 
 async function load() {
   try {
-    const { data } = await listPersons(props.orgId);
-    rows.value = data;
+    const [p, s] = await Promise.all([
+      listPersons(props.orgId),
+      listStructureNodes(props.orgId).catch(() => ({ data: [] }))
+    ]);
+    rows.value = p.data;
+    classes.value = (s.data || []).filter(n => n.node_type === 'class');
+    trades.value = (s.data || []).filter(n => n.node_type === 'trade');
   } catch (err) { error.value = err.message; }
 }
-watch(() => props.orgId, (id) => { if (id) { rows.value = null; error.value = ''; notice.value = ''; load(); } }, { immediate: true });
 
-const filtered = () => (rows.value || []).filter(r =>
-  (r.full_name + ' ' + r.person_id).toLowerCase().includes(search.value.toLowerCase()));
+watch(() => props.orgId, (id) => {
+  if (id) { rows.value = null; error.value = ''; notice.value = ''; load(); }
+}, { immediate: true });
 
-async function addPerson() {
-  busy.value = true; error.value = ''; notice.value = '';
+const filtered = computed(() => (rows.value || []).filter(r =>
+  (!statusFilter.value || r.status === statusFilter.value) &&
+  (r.full_name + ' ' + r.person_id + ' ' + (r.class_id || '')).toLowerCase().includes(search.value.toLowerCase())));
+
+const isHS = computed(() => props.track === 'HIGH_SCHOOL');
+
+async function addPerson(payload) {
+  error.value = ''; notice.value = '';
   try {
-    const payload = { organization_id: props.orgId, track: 'HIGH_SCHOOL', full_name: form.value.full_name, person_id: form.value.person_id };
-    for (const k of ['gender', 'guardian_contact', 'academic_year']) if (form.value[k]) payload[k] = form.value[k];
-    if (STATUSES.includes(form.value.status)) payload.status = form.value.status;
-    await createPerson(payload);
-    form.value = EMPTY(); adding.value = false; notice.value = 'Person added.';
+    await createPerson({ ...payload, organization_id: props.orgId, track: props.track });
+    adding.value = false; notice.value = 'Person added.';
     await load();
-  } catch (err) { error.value = err.message; } finally { busy.value = false; }
+  } catch (err) { error.value = err.message; }
 }
 
 async function changeStatus(p, ev) {
@@ -62,47 +71,47 @@ async function remove(p) {
 <template>
   <section class="view">
     <div class="row-between">
-      <h2 class="page-title">People</h2>
+      <h2 class="page-title">{{ isHS ? 'Students' : 'People' }}</h2>
       <LiquidButton v-if="canWrite" @click="adding = !adding">{{ adding ? 'Cancel' : '+ Add person' }}</LiquidButton>
     </div>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="notice" class="notice">{{ notice }}</p>
 
-    <form v-if="adding" class="card form-card" @submit.prevent="addPerson">
-      <input class="input" v-model="form.full_name" placeholder="Full name" required />
-      <input class="input" v-model="form.person_id" placeholder="Person ID (e.g. student number)" required />
-      <select class="input" v-model="form.gender">
-        <option value="">Gender (optional)</option><option>Male</option><option>Female</option><option>Other</option>
-      </select>
-      <input class="input" v-model="form.guardian_contact" placeholder="Guardian contact (optional)" />
-      <input class="input" v-model="form.academic_year" placeholder="Academic year (optional)" />
-      <select class="input" v-model="form.status">
-        <option v-for="s in STATUSES" :key="s">{{ s }}</option>
-      </select>
-      <div class="form-actions"><LiquidButton :disabled="busy">{{ busy ? 'Saving…' : 'Save person' }}</LiquidButton></div>
-    </form>
+    <PersonForm v-if="adding" :org-id="orgId" :track="track" :classes="classes" :trades="trades"
+      @save="addPerson" @cancel="adding = false" />
 
     <template v-if="rows">
-      <input class="input search" v-model="search" placeholder="Search by name or ID…" aria-label="Search people" />
-      <p v-if="filtered().length === 0" class="muted">No people found.</p>
+      <div class="filter-row">
+        <input class="input search" v-model="search" placeholder="Search by name, ID, or class…" aria-label="Search people" />
+        <select class="input" v-model="statusFilter" aria-label="Filter by status">
+          <option value="">All statuses</option>
+          <option v-for="s in STATUSES" :key="s">{{ s }}</option>
+        </select>
+      </div>
+      <p v-if="filtered.length === 0" class="muted">No people found.</p>
       <div v-else class="table-wrap">
         <table class="table">
-          <thead><tr><th>Name</th><th>Person ID</th><th>Status</th><th>Guardian</th><th>Academic year</th><th v-if="canWrite"></th></tr></thead>
+          <thead>
+            <tr>
+              <th>Name</th><th>Person ID</th>
+              <th v-if="isHS">Class</th>
+              <th v-if="isHS">Annual marks</th>
+              <th>Status</th><th></th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="p in filtered()" :key="p.id">
-              <td>{{ p.full_name }}</td>
+              <td><button class="link strong" @click="emit('open-student', p.id)">{{ p.full_name }}</button></td>
               <td>{{ p.person_id }}</td>
+              <td v-if="isHS">{{ p.class_id || '—' }}</td>
+              <td v-if="isHS">{{ Number(p.term1_marks ?? 40) + Number(p.term2_marks ?? 40) + Number(p.term3_marks ?? 40) }} / 120</td>
               <td>
                 <select v-if="canWrite" class="input status-select" :value="p.status" @change="changeStatus(p, $event)" :aria-label="`Status for ${p.full_name}`">
                   <option v-for="s in STATUSES" :key="s">{{ s }}</option>
                 </select>
                 <span v-else class="pill">{{ p.status }}</span>
               </td>
-              <td>{{ p.guardian_contact || '—' }}</td>
-              <td>{{ p.academic_year || '—' }}</td>
-              <td v-if="canWrite">
-                <button v-if="isAdmin" class="link danger" @click="remove(p)">Delete</button>
-              </td>
+              <td><button v-if="isAdmin" class="link danger" @click="remove(p)">Delete</button></td>
             </tr>
           </tbody>
         </table>
