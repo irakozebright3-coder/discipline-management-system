@@ -627,3 +627,21 @@
 .dm-public-content details > summary:focus-visible { outline-offset: 4px; }
 .dm-public-content .text-destructive { color: #fca5a5; }
 .dm-public-content .text-emerald-700 { color: #6ee7b7; }
+
+
+/* Scroll reveals are progressively enhanced; content remains visible when JS or IntersectionObserver is unavailable. */
+.dm-showcase-preview { touch-action: pan-y pinch-zoom; }
+.dm-reveal-pending {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity .6s ease, transform .6s cubic-bezier(.2,.8,.2,1);
+}
+.dm-reveal-pending.dm-reveal-visible { opacity: 1; transform: translateY(0); }
+.dm-contact-honeypot {
+  position: absolute !important;
+  left: -10000px !important;
+  top: auto !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
