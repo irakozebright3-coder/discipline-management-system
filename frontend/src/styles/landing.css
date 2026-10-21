@@ -580,3 +580,9 @@
 @media (prefers-reduced-motion: reduce) {
   .dm-public-navbar .dm-nav-cta-link:hover { transform: none; }
 }
+
+@media (max-width: 900px) {
+  .dm-public-navbar .dm-desktop-nav { display: none !important; }
+  .dm-public-navbar .dm-mobile-toggle { display: grid; }
+  .dm-mobile-menu { display: flex; }
+}
