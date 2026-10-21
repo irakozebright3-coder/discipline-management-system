@@ -45,19 +45,34 @@ Multi-tenant discipline tracking: organizations manage people, a violations cata
 
 See [architecture and deployment notes](docs/architecture-and-deployment.md) before production setup.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Firakozebright3-coder%2Fdiscipline-management-system&root-directory=frontend&project-name=discipline-management-system)
+### Deploying the full stack to Vercel
 
-### Deploying the frontend to Vercel
-1. Push this repository to GitHub, then go to [vercel.com/new](https://vercel.com/new) and import it.
-2. Set **Root Directory** to `frontend` (Vercel auto-detects Vite: build `npm run build`, output `dist`).
-3. Add the environment variables (Project → Settings → Environment Variables):
-   - `VITE_SUPABASE_URL` — your Supabase project URL
-   - `VITE_SUPABASE_ANON_KEY` — your Supabase anon (public) key
-   - `VITE_API_BASE_URL` — the public URL of the deployed API (e.g. `https://sdms-api.onrender.com`)
-4. Deploy. On your first deploy Vercel gives you the production domain (e.g. `https://discipline-management-system.vercel.app`).
-5. On the API host, add that domain to `CORS_ORIGINS` (comma-separated) and redeploy the API so the frontend is allowed to call it.
+The repository ships with a root `vercel.json` that deploys BOTH the Vue frontend and the
+Express API (as serverless functions) in a single Vercel project.
 
-The `frontend/vercel.json` handles SPA rewrites and immutable caching for hashed assets, so the app can also be served from any direct URL.
+1. Go to [vercel.com/new](https://vercel.com/new) and import this repository.
+2. Leave **Root Directory** as the repository root (do not set it to `frontend`).
+3. Add these environment variables (enable them for Production):
+
+   | Variable | Value |
+   |---|---|
+   | `VITE_SUPABASE_URL` | your Supabase project URL, e.g. `https://<ref>.supabase.co` |
+   | `VITE_SUPABASE_ANON_KEY` | your Supabase anon (publishable) key |
+   | `VITE_API_BASE_URL` | leave **empty** so the app calls `/api` on its own domain |
+   | `SUPABASE_URL` | same as `VITE_SUPABASE_URL` |
+   | `SUPABASE_ANON_KEY` | same as `VITE_SUPABASE_ANON_KEY` |
+   | `SUPABASE_SERVICE_ROLE_KEY` | your Supabase service-role (secret) key - server only |
+
+   Copy the keys from Supabase Studio -> Project Settings -> API Keys.
+   Never expose the service-role key to the frontend.
+
+4. Deploy. Vercel builds the frontend and the `api/index.js` function; the app usually lands on
+   `https://discipline-management-system.vercel.app`. Check `https://<your-domain>/health` -
+   it should answer `{"ok":true,"service":"sdms-api"}`.
+
+Same-origin API calls are allowed automatically; only cross-origin hosts need `CORS_ORIGINS`.
+The `frontend/vercel.json` keeps SPA rewrites and immutable asset caching if you deploy the
+frontend as its own project instead.
 
 ## Security
 - Never commit credentials, private keys, real student records or database exports. Use synthetic test data during development.
