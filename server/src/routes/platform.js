@@ -128,6 +128,44 @@ const configSchema = z.object({
   system_health: z.string().max(50).optional(),
   system_version: z.string().max(20).optional()
 });
+router.get('/config', async (_req, res) => {
+  const { data, error } = await adminDb.from('platform_config').select('*').limit(1).maybeSingle();
+  if (error) return res.status(400).json({ error: 'Could not load platform configuration.' });
+  res.json({ data });
+});
+
+router.get('/contributors', async (_req, res) => {
+  const { data, error } = await adminDb.from('contributors').select('*').order('created_at', { ascending: false });
+  if (error) return res.status(400).json({ error: 'Could not load contributors.' });
+  res.json({ data });
+});
+
+router.get('/help-articles', async (_req, res) => {
+  const { data, error } = await adminDb.from('help_articles').select('*').order('created_at', { ascending: false });
+  if (error) return res.status(400).json({ error: 'Could not load help articles.' });
+  res.json({ data });
+});
+
+router.get('/creator-profile', async (_req, res) => {
+  const { data, error } = await adminDb.from('creator_profiles').select('*').limit(1).maybeSingle();
+  if (error) return res.status(400).json({ error: 'Could not load creator profile.' });
+  res.json({ data });
+});
+
+router.patch('/organizations/:id', async (req, res) => {
+  const { suspended } = req.body || {};
+  if (typeof suspended !== 'boolean') return res.status(400).json({ error: 'suspended (boolean) is required.' });
+  const { data, error } = await adminDb.from('organizations')
+    .update({ suspended }).eq('id', req.params.id).select().single();
+  if (error) return res.status(400).json({ error: 'Could not update organization.' });
+  await adminDb.from('platform_audit_logs').insert({
+    action: suspended ? 'organization.suspend' : 'organization.unsuspend',
+    target: data.name, details: `Organization ${suspended ? 'suspended' : 'reactivated'}.`,
+    user_name: req.user.email, actor_id: req.user.id, result: 'Success'
+  });
+  res.json({ data });
+});
+
 router.patch('/config', async (req, res) => {
   const parsed = configSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid config update.' });
