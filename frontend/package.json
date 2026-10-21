@@ -1,6 +1,6 @@
 {
   "name": "sdms-frontend",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,10 +10,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
-    "vue": "^3.5.13"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.2.1",
+    "@vitejs/plugin-react": "^4.3.4",
     "vite": "^5.4.11"
   }
 }

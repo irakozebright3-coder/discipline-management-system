@@ -1,9 +1,9 @@
 # Discipline Management System (SDMS)
 
-Multi-tenant discipline tracking: organizations manage people, a violations catalog, and incidents with marks deduction, status workflow, and an audit trail. Vue 3 frontend, Node.js/Express API, Supabase Auth and Supabase PostgreSQL.
+Multi-tenant discipline tracking: organizations manage people, a violations catalog, and incidents with marks deduction, status workflow, and an audit trail. React frontend, Node.js/Express API, Supabase Auth and Supabase PostgreSQL.
 
 ## Repository layout
-- `frontend/` — runnable Vite + Vue 3 app: sign in/up, organization picker, overview, people, incidents, violations and admin pages, with a liquid-button design system, sliding-word titles, clustering-word canvas backdrop, 3D card tilt and view entrances, and reduced-motion fallbacks.
+- `frontend/` — runnable Vite + React app: sign in/up, organization picker, overview, people, incidents, violations and admin pages, with a liquid-button design system, sliding-word titles, clustering-word canvas backdrop, 3D card tilt and view entrances, and reduced-motion fallbacks.
 - `server/` — Express API with Supabase JWT validation, organization-scoped routes for persons, incidents, violations and organizations, plus audit logging.
 - `supabase/migrations/` — PostgreSQL schema with row-level security policies:
   - `001_initial_schema.sql` — base schema (organizations, members, persons, violations, incidents, audit log).
