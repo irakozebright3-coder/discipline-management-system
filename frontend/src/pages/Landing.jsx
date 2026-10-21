@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Activity, ArrowDownRight, ArrowRight, BarChart3, Briefcase, CheckCircle2,
@@ -142,6 +142,7 @@ export default function Landing() {
   const [creator, setCreator] = useState(null);
   const [audienceIndex, setAudienceIndex] = useState(0);
   const [activeShowcase, setActiveShowcase] = useState(0);
+  const swipeStart = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -166,6 +167,21 @@ export default function Landing() {
   const slide = SHOWCASES[activeShowcase];
   const showPrevious = () => setActiveShowcase((index) => (index - 1 + SHOWCASES.length) % SHOWCASES.length);
   const showNext = () => setActiveShowcase((index) => (index + 1) % SHOWCASES.length);
+  const handlePreviewPointerDown = (event) => {
+    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+    swipeStart.current = { x: event.clientX, y: event.clientY };
+  };
+  const handlePreviewPointerUp = (event) => {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) return;
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    if (Math.abs(deltaX) > 48 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25) {
+      if (deltaX < 0) showNext();
+      else showPrevious();
+    }
+  };
 
   return (
     <main className="dm-landing">
@@ -255,7 +271,15 @@ export default function Landing() {
               <span>Use arrows to explore</span>
             </div>
           </div>
-          <div className="dm-showcase-preview">
+          <div
+            className="dm-showcase-preview"
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="Product interface previews. On touch screens, swipe left or right to change slides."
+            onPointerDown={handlePreviewPointerDown}
+            onPointerUp={handlePreviewPointerUp}
+            onPointerCancel={() => { swipeStart.current = null; }}
+          >
             <ProductPreview slide={slide} />
             <div className="dm-showcase-dots" aria-label="Choose product preview">
               {SHOWCASES.map((item, index) => <button key={item.key} type="button" className={index === activeShowcase ? 'active' : ''} onClick={() => setActiveShowcase(index)} aria-label={`Show ${item.label} preview`} aria-current={index === activeShowcase ? 'true' : undefined} />)}
