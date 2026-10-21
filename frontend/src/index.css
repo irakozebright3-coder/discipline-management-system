@@ -2,45 +2,91 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * DM design tokens. The application defaults to the established midnight-blue
+ * palette so authenticated pages and the public experience feel like one product.
+ * The .dark variant is retained for any components that opt into it explicitly.
+ */
 @layer base {
   :root {
-    --background: 240 20% 99%;
-    --foreground: 260 25% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 260 25% 12%;
-    --primary: 263 84% 58%;
+    color-scheme: dark;
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+    --card: 221 35% 14%;
+    --card-foreground: 210 40% 98%;
+    --primary: 258 90% 66%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 260 16% 95%;
-    --secondary-foreground: 260 25% 15%;
-    --muted: 260 16% 95%;
-    --muted-foreground: 260 8% 45%;
-    --accent: 263 60% 96%;
-    --accent-foreground: 263 84% 40%;
-    --destructive: 0 72% 51%;
+    --secondary: 220 27% 17%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 220 27% 16%;
+    --muted-foreground: 215 18% 67%;
+    --accent: 222 28% 21%;
+    --accent-foreground: 252 100% 91%;
+    --destructive: 0 68% 54%;
     --destructive-foreground: 0 0% 100%;
-    --border: 260 14% 89%;
-    --input: 260 14% 89%;
-    --ring: 263 84% 58%;
-    --radius: 0.625rem;
+    --border: 220 25% 23%;
+    --input: 220 25% 23%;
+    --ring: 258 90% 66%;
+    --radius: 0.75rem;
   }
+
   .dark {
-    --background: 260 25% 8%;
-    --foreground: 260 16% 94%;
-    --card: 260 22% 12%;
-    --card-foreground: 260 16% 94%;
-    --primary: 263 84% 66%;
+    color-scheme: dark;
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --card: 221 38% 12%;
+    --card-foreground: 210 40% 98%;
+    --primary: 258 90% 70%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 260 14% 18%;
-    --secondary-foreground: 260 16% 90%;
-    --muted: 260 14% 18%;
-    --muted-foreground: 260 8% 65%;
-    --accent: 263 30% 22%;
-    --accent-foreground: 263 90% 80%;
-    --destructive: 0 62% 45%;
+    --secondary: 220 27% 16%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 220 27% 15%;
+    --muted-foreground: 215 18% 68%;
+    --accent: 222 28% 20%;
+    --accent-foreground: 252 100% 92%;
+    --destructive: 0 64% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 260 12% 22%;
-    --input: 260 12% 22%;
-    --ring: 263 84% 66%;
+    --border: 220 25% 21%;
+    --input: 220 25% 21%;
+    --ring: 258 90% 70%;
   }
-  body { @apply bg-background text-foreground antialiased; }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    min-height: 100%;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    min-height: 100vh;
+    @apply bg-background text-foreground antialiased;
+  }
+
+  button, input, select, textarea {
+    font: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    color: #ffffff;
+    background: rgba(139, 92, 246, .42);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
