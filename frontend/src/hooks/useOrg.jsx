@@ -13,6 +13,7 @@ export function OrgProvider({ children }) {
   useEffect(() => {
     let cancelled = false;
     if (!session?.user?.id) { setOrgs([]); setOrgsLoaded(true); return; }
+    setOrgsLoaded(false); // keep deep links on their page while memberships load
     (async () => {
       try {
         const { data } = await listInstitutions();
