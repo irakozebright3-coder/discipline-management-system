@@ -58,7 +58,7 @@ export default function Sidebar() {
         aria-label="Active organization"
       >
         {orgs.length === 0 && <option value="">No organization yet</option>}
-        {orgs.map((item) => <option key={item.organization.id} value={item.organization.id}>{item.organization.name}</option>)}
+        {orgs.map((item) => <option key={item.institution.id} value={item.institution.id}>{item.institution.name}</option>)}
       </select>
       {membership && <p className="mt-1 text-xs text-muted-foreground">Your role: {ROLE_LABELS[membership.role] || membership.role}</p>}
     </div>
