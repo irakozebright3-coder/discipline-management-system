@@ -5,15 +5,18 @@ import { listInstitutions } from '../lib/api.js';
 const OrgContext = createContext(null);
 
 export function OrgProvider({ children }) {
-  const { session } = useAuth();
+  const { session, loading } = useAuth();
   const [orgs, setOrgs] = useState([]);
   const [orgsLoaded, setOrgsLoaded] = useState(false);
   const [activeOrgId, setActiveOrgId] = useState(localStorage.getItem('dm.institution') || '');
 
   useEffect(() => {
     let cancelled = false;
+    // While auth is restoring, memberships are unknown: stay "not loaded" so
+    // deep links keep rendering their page instead of bouncing to /setup.
+    if (loading) return;
     if (!session?.user?.id) { setOrgs([]); setOrgsLoaded(true); return; }
-    setOrgsLoaded(false); // keep deep links on their page while memberships load
+    setOrgsLoaded(false);
     (async () => {
       try {
         const { data } = await listInstitutions();
@@ -30,7 +33,7 @@ export function OrgProvider({ children }) {
       finally { if (!cancelled) setOrgsLoaded(true); }
     })();
     return () => { cancelled = true; };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, loading]);
 
   const pickActive = (list) => {
     setActiveOrgId(prev => {
