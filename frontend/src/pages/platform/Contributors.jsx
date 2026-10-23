@@ -1,64 +1,47 @@
 import { useEffect, useState } from 'react';
-import { platformGet, platformPost, platformDelete } from '../../lib/api.js';
-import { Button } from '../../components/ui/button.jsx';
-import { Input } from '../../components/ui/input.jsx';
-import { Label } from '../../components/ui/label.jsx';
+import { getContributors } from '../../lib/api.js';
+import SearchBar from '../../components/SearchBar.jsx';
+import { Badge } from '../../components/ui/badge.jsx';
 
+// The public contributor wall shown on the community page — read-only here.
 export default function Contributors() {
   const [rows, setRows] = useState(null);
-  const [form, setForm] = useState({ name: '', role: '', contribution: '' });
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
 
-  const load = async () => setRows((await platformGet('contributors')).data);
-  useEffect(() => { load().catch(e => setError(e.message)); }, []);
+  useEffect(() => {
+    getContributors().then(({ data }) => setRows(data)).catch(e => setError(e.message));
+  }, []);
 
-  const add = async (e) => {
-    e.preventDefault();
-    if (!form.name.trim()) return;
-    setBusy(true); setError('');
-    try {
-      await platformPost('contributors', { ...form, name: form.name.trim() });
-      setForm({ name: '', role: '', contribution: '' });
-      await load();
-    } catch (e2) { setError(e2.message); } finally { setBusy(false); }
-  };
-
-  const remove = async (c) => {
-    if (!window.confirm(`Remove contributor "${c.name}"?`)) return;
-    try { await platformDelete(`contributors/${c.id}`); await load(); }
-    catch (e) { setError(e.message); }
-  };
+  const needle = search.trim().toLowerCase();
+  const visible = (rows || []).filter(c => !needle ||
+    [c.name, c.title, c.role].filter(Boolean).join(' ').toLowerCase().includes(needle));
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Contributors</h1>
+      <div>
+        <h1 className="text-2xl font-bold">Contributors</h1>
+        <p className="text-sm text-muted-foreground">The contributor wall shown on the public community page.</p>
+      </div>
       {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-      <form onSubmit={add} className="grid max-w-2xl gap-4 rounded-lg border bg-card p-6 md:grid-cols-3">
-        <div className="space-y-1.5"><Label>Name</Label>
-          <Input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-        <div className="space-y-1.5"><Label>Role</Label>
-          <Input value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} /></div>
-        <div className="space-y-1.5"><Label>Contribution</Label>
-          <Input value={form.contribution} onChange={e => setForm({ ...form, contribution: e.target.value })} /></div>
-        <div className="md:col-span-3"><Button type="submit" disabled={busy}>{busy ? 'Adding…' : 'Add contributor'}</Button></div>
-      </form>
-      {!rows ? <p className="text-muted-foreground">Loading…</p> : rows.length === 0 ? <p className="text-muted-foreground">No contributors yet.</p> : (
-        <div className="overflow-hidden rounded-lg border bg-card">
+      <SearchBar value={search} onChange={setSearch} placeholder="Search contributors…" ariaLabel="Search contributors" className="max-w-sm" />
+      {!rows ? <p className="text-muted-foreground">Loading…</p> : (
+        <div className="overflow-x-auto rounded-lg border bg-card">
           <table className="w-full text-sm">
             <thead><tr className="border-b bg-muted/50 text-left text-muted-foreground">
-              <th className="p-3 font-medium">Name</th><th className="p-3 font-medium">Role</th>
-              <th className="p-3 font-medium">Contribution</th><th className="p-3 font-medium"></th>
+              <th className="p-3 font-medium">Name</th><th className="p-3 font-medium">Title</th>
+              <th className="p-3 font-medium">Role</th><th className="p-3 font-medium">Joined</th>
             </tr></thead>
             <tbody>
-              {rows.map(c => (
-                <tr key={c.id} className="border-b last:border-0">
+              {visible.map(c => (
+                <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="p-3 font-medium">{c.name}</td>
-                  <td className="p-3">{c.role || '—'}</td>
-                  <td className="p-3">{c.contribution || '—'}</td>
-                  <td className="p-3"><button className="text-sm text-destructive hover:underline" onClick={() => remove(c)}>Delete</button></td>
+                  <td className="p-3">{c.title || '—'}</td>
+                  <td className="p-3"><Badge variant="outline">{c.role || 'contributor'}</Badge></td>
+                  <td className="p-3 text-muted-foreground">{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
                 </tr>
               ))}
+              {visible.length === 0 && <tr><td colSpan="4" className="p-6 text-center text-muted-foreground">No contributors match.</td></tr>}
             </tbody>
           </table>
         </div>

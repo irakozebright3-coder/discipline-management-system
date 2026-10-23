@@ -26,7 +26,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import People from './pages/People.jsx';
 import StudentScoreCard from './pages/StudentScoreCard.jsx';
 import Incidents from './pages/Incidents.jsx';
-import Violations from './pages/Violations.jsx';
+import Categories from './pages/Categories.jsx';
 import Structure from './pages/Structure.jsx';
 import History from './pages/History.jsx';
 import Reports from './pages/Reports.jsx';
@@ -38,7 +38,6 @@ import AuditLogs from './pages/platform/AuditLogs.jsx';
 import Contributors from './pages/platform/Contributors.jsx';
 import CreatorProfileManage from './pages/platform/CreatorProfileManage.jsx';
 import HelpCenterManage from './pages/platform/HelpCenterManage.jsx';
-import Backups from './pages/platform/Backups.jsx';
 import SystemControl from './pages/platform/SystemControl.jsx';
 
 function PublicPage({ children }) {
@@ -75,7 +74,7 @@ export default function App() {
             <Route path="/people" element={<People />} />
             <Route path="/people/:personId" element={<StudentScoreCard />} />
             <Route path="/incidents" element={<Incidents />} />
-            <Route path="/violations" element={<Violations />} />
+            <Route path="/categories" element={<Categories />} />
             <Route path="/structure" element={<Structure />} />
             <Route path="/history" element={<History />} />
             <Route path="/reports" element={<Reports />} />
@@ -91,7 +90,6 @@ export default function App() {
             <Route path="contributors" element={<Contributors />} />
             <Route path="creator-profile" element={<CreatorProfileManage />} />
             <Route path="help-center" element={<HelpCenterManage />} />
-            <Route path="backups" element={<Backups />} />
             <Route path="system-control" element={<SystemControl />} />
           </Route>
 

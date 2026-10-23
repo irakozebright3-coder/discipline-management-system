@@ -1,79 +1,80 @@
 import { useEffect, useState } from 'react';
 import { useOrg } from '../hooks/useOrg.jsx';
-import { listIncidents } from '../lib/api.js';
-import { Input } from '../components/ui/input.jsx';
+import { listAuditLogs } from '../lib/api.js';
+import SearchBar from '../components/SearchBar.jsx';
 import { Select } from '../components/ui/select.jsx';
 import { Badge } from '../components/ui/badge.jsx';
 
-const STATUSES = ['Reported', 'Under Review', 'Confirmed', 'Resolved', 'Appealed', 'Closed'];
+const ENTITIES = ['person', 'incident', 'incident_category', 'org_unit', 'membership', 'invitation', 'score_transaction', 'institution'];
 
 export default function History() {
   const { orgId } = useOrg();
   const [rows, setRows] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [termFilter, setTermFilter] = useState('');
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [entityFilter, setEntityFilter] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!orgId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await listIncidents(orgId);
-        if (!cancelled) setRows(data);
-      } catch (e) { if (!cancelled) setError(e.message); }
-    })();
-    return () => { cancelled = true; };
-  }, [orgId]);
+  const load = async (p = 1) => {
+    try {
+      const res = await listAuditLogs(orgId, {
+        search, entity_type: entityFilter || undefined,
+        from: from || undefined, to: to || undefined, page: p, limit: 25
+      });
+      setRows(res.data); setTotal(res.total); setPage(p);
+    } catch (e) { setError(e.message); }
+  };
 
-  const filtered = (rows || []).filter(r =>
-    (!statusFilter || r.status === statusFilter) &&
-    (!termFilter || r.term === termFilter) &&
-    (r.person_name + ' ' + r.violation_name).toLowerCase().includes(search.toLowerCase()));
+  useEffect(() => { if (orgId) load(1); }, [orgId, search, entityFilter, from, to]);
+  const pages = Math.max(1, Math.ceil(total / 25));
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">History</h1>
-        <p className="text-sm text-muted-foreground">Browse the full incident history of your organization.</p>
+        <p className="text-sm text-muted-foreground">Every recorded action in this institution, with who did it and when.</p>
       </div>
       {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-      <div className="flex flex-wrap gap-2">
-        <Input className="max-w-xs" placeholder="Search person or violation…" value={search} onChange={e => setSearch(e.target.value)} aria-label="Search history" />
-        <Select className="max-w-[180px]" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} aria-label="Filter by status">
-          <option value="">All statuses</option>
-          {STATUSES.map(s => <option key={s}>{s}</option>)}
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchBar value={search} onChange={setSearch} placeholder="Search action, actor, details…" ariaLabel="Search audit history" className="max-w-sm" />
+        <Select className="max-w-[190px]" value={entityFilter} onChange={e => setEntityFilter(e.target.value)} aria-label="Filter by entity">
+          <option value="">All entities</option>
+          {ENTITIES.map(s => <option key={s} value={s}>{s}</option>)}
         </Select>
-        <Select className="max-w-[150px]" value={termFilter} onChange={e => setTermFilter(e.target.value)} aria-label="Filter by term">
-          <option value="">All terms</option>
-          <option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option>
-        </Select>
+        <input type="date" className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={from} onChange={e => setFrom(e.target.value)} aria-label="From date" />
+        <input type="date" className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={to} onChange={e => setTo(e.target.value)} aria-label="To date" />
+        <span className="ml-auto text-sm text-muted-foreground">{total} {total === 1 ? 'entry' : 'entries'}</span>
       </div>
       {!rows ? <p className="text-muted-foreground">Loading…</p> : (
         <div className="overflow-x-auto rounded-lg border bg-card">
           <table className="w-full text-sm">
             <thead><tr className="border-b bg-muted/50 text-left text-muted-foreground">
-              <th className="p-3 font-medium">Person</th><th className="p-3 font-medium">Violation</th>
-              <th className="p-3 font-medium">Term</th><th className="p-3 font-medium">Date</th>
-              <th className="p-3 font-medium">Marks deducted</th><th className="p-3 font-medium">Remaining</th>
-              <th className="p-3 font-medium">Status</th>
+              <th className="p-3 font-medium">When</th><th className="p-3 font-medium">Action</th>
+              <th className="p-3 font-medium">Entity</th><th className="p-3 font-medium">Actor</th><th className="p-3 font-medium">Details</th>
             </tr></thead>
             <tbody>
-              {filtered.map(r => (
+              {rows.map(r => (
                 <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="p-3">{r.person_name}</td>
-                  <td className="p-3">{r.violation_name || r.reason || '—'}</td>
-                  <td className="p-3">{r.term}</td>
-                  <td className="p-3">{r.incident_date}</td>
-                  <td className="p-3">{r.marks_deducted}</td>
-                  <td className="p-3">{r.remaining_marks ?? '—'}</td>
-                  <td className="p-3"><Badge variant="outline">{r.status}</Badge></td>
+                  <td className="whitespace-nowrap p-3 text-muted-foreground">{new Date(r.created_at).toLocaleString()}</td>
+                  <td className="p-3"><Badge variant="outline">{r.action}</Badge></td>
+                  <td className="p-3">{r.entity_type}</td>
+                  <td className="p-3">{r.actor_name || r.actor_id?.slice(0, 8) || 'system'}</td>
+                  <td className="max-w-md truncate p-3 text-muted-foreground">{typeof r.details === 'string' ? r.details : JSON.stringify(r.details || {})}</td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan="7" className="p-6 text-center text-muted-foreground">No incidents match these filters.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan="5" className="p-6 text-center text-muted-foreground">No history entries match.</td></tr>}
             </tbody>
           </table>
+        </div>
+      )}
+      {pages > 1 && (
+        <div className="flex items-center justify-end gap-2 text-sm">
+          <button className="rounded-md border px-3 py-1.5 disabled:opacity-50" disabled={page <= 1} onClick={() => load(page - 1)}>Previous</button>
+          <span className="text-muted-foreground">Page {page} of {pages}</span>
+          <button className="rounded-md border px-3 py-1.5 disabled:opacity-50" disabled={page >= pages} onClick={() => load(page + 1)}>Next</button>
         </div>
       )}
     </div>

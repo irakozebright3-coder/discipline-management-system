@@ -14,6 +14,10 @@ router.get('/', requireAuth, requireMembership(), async (req, res) => {
   if (req.query.actor_id) query = query.eq('actor_id', req.query.actor_id);
   if (req.query.from) query = query.gte('created_at', req.query.from);
   if (req.query.to) query = query.lte('created_at', req.query.to + (String(req.query.to).length === 10 ? 'T23:59:59' : ''));
+  if (req.query.search) {
+    const s = String(req.query.search).replace(/[%,]/g, '');
+    query = query.or(`action.ilike.%${s}%,actor_name.ilike.%${s}%,entity_type.ilike.%${s}%`);
+  }
   const { data, error, count } = await query.order('created_at', { ascending: false })
     .range((page - 1) * limit, page * limit - 1);
   if (error) return res.status(500).json({ error: 'Could not load the audit history.' });

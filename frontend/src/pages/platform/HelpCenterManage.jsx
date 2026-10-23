@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { platformGet, platformPost, platformDelete } from '../../lib/api.js';
+import SearchBar from '../../components/SearchBar.jsx';
 import { Button } from '../../components/ui/button.jsx';
 import { Input } from '../../components/ui/input.jsx';
 import { Label } from '../../components/ui/label.jsx';
@@ -10,6 +11,7 @@ const CATEGORIES = ['Getting started', 'Discipline marks', 'Reports', 'Account &
 
 export default function HelpCenterManage() {
   const [rows, setRows] = useState(null);
+  const [search, setSearch] = useState('');
   const [form, setForm] = useState({ category: CATEGORIES[0], title: '', content: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -56,7 +58,7 @@ export default function HelpCenterManage() {
               <th className="p-3 font-medium">Title</th><th className="p-3 font-medium">Category</th><th className="p-3 font-medium"></th>
             </tr></thead>
             <tbody>
-              {rows.map(a => (
+              {rows.filter(a => !search.trim() || [a.title, a.category, a.content].filter(Boolean).join(' ').toLowerCase().includes(search.trim().toLowerCase())).map(a => (
                 <tr key={a.id} className="border-b last:border-0">
                   <td className="p-3 font-medium">{a.title}</td>
                   <td className="p-3">{a.category}</td>

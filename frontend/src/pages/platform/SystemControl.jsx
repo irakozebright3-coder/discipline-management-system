@@ -13,13 +13,13 @@ export default function SystemControl() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    platformGet('config').then(({ data }) => setConfig(data)).catch(e => setError(e.message));
+    platformGet('settings').then(({ data }) => setConfig(data)).catch(e => setError(e.message));
   }, []);
 
   const patch = async (payload) => {
     setBusy(true); setError(''); setNotice('');
     try {
-      const { data } = await platformPatch('config', payload);
+      const { data } = await platformPatch('settings', payload);
       setConfig(data); setNotice('Configuration saved.');
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   };

@@ -1,129 +1,104 @@
 import { useEffect, useState } from 'react';
 import { useOrg } from '../hooks/useOrg.jsx';
-import { listIncidents, listPersons } from '../lib/api.js';
-import { TRACK_LABELS } from '../lib/discipline.js';
+import { getReports, reportsExportUrl, scoresExportUrl, baseUrl } from '../lib/api.js';
+import SearchBar from '../components/SearchBar.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { Select } from '../components/ui/select.jsx';
+import { Input } from '../components/ui/input.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card.jsx';
-import StatCard from '../components/StatCard.jsx';
+import { Badge } from '../components/ui/badge.jsx';
+
+const STATUSES = ['submitted', 'under_review', 'awaiting_decision', 'resolved', 'appealed', 'closed'];
+const SEVERITIES = ['minor', 'moderate', 'serious', 'not_applicable'];
 
 export default function Reports() {
   const { orgId, organization } = useOrg();
-  const track = organization?.track || 'HIGH_SCHOOL';
-  const [incidents, setIncidents] = useState(null);
-  const [people, setPeople] = useState([]);
-  const [termFilter, setTermFilter] = useState('');
+  const [data, setData] = useState(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [severityFilter, setSeverityFilter] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!orgId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const [i, p] = await Promise.all([listIncidents(orgId), listPersons(orgId)]);
-        if (cancelled) return;
-        setIncidents(i.data || []); setPeople(p.data || []);
-      } catch (e) { if (!cancelled) setError(e.message); }
-    })();
-    return () => { cancelled = true; };
-  }, [orgId]);
+  const params = { search, status: statusFilter || undefined, severity: severityFilter || undefined, from: from || undefined, to: to || undefined };
+  const load = async () => {
+    try { const res = await getReports(orgId, params); setData(res.data); }
+    catch (e) { setError(e.message); }
+  };
+  useEffect(() => { if (orgId) load(); }, [orgId, search, statusFilter, severityFilter, from, to]);
 
-  const filtered = (incidents || []).filter(r => !termFilter || r.term === termFilter);
-  const confirmed = filtered.filter(r => r.confirmed).length;
-  const totalDeducted = filtered.reduce((s, r) => s + Number(r.marks_deducted || 0), 0);
-  const bySeverity = {};
-  for (const r of filtered) bySeverity[r.severity] = (bySeverity[r.severity] || 0) + 1;
-  const topViolations = Object.entries(
-    filtered.reduce((counts, r) => {
-      const key = r.violation_name || r.reason || 'Other';
-      counts[key] = (counts[key] || 0) + 1;
-      return counts;
-    }, {})
-  ).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const watchlist = track === 'HIGH_SCHOOL'
-    ? people.map(p => ({ ...p, annual: Number(p.term1_marks ?? 40) + Number(p.term2_marks ?? 40) + Number(p.term3_marks ?? 40) }))
-        .sort((a, b) => a.annual - b.annual).slice(0, 10)
-    : [];
-
-  const exportCsv = () => {
-    const rows = [['Person', 'Violation', 'Term', 'Date', 'Marks deducted', 'Remaining', 'Status', 'Confirmed']];
-    for (const r of filtered) {
-      rows.push([r.person_name, r.violation_name || r.reason || '', r.term, r.incident_date,
-        r.marks_deducted, r.remaining_marks ?? '', r.status, r.confirmed ? 'Yes' : 'No']);
-    }
-    const csv = rows.map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  const download = async (kind) => {
+    const { supabase } = await import('../lib/supabase.js');
+    const { data: { session } } = await supabase.auth.getSession();
+    const url = (kind === 'scores' ? scoresExportUrl : reportsExportUrl)(orgId, params);
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${session?.access_token}` } });
+    if (!response.ok) { const b = await response.json().catch(() => ({})); setError(b.error || 'Export failed.'); return; }
+    const blob = await response.blob();
     const a = document.createElement('a');
-    a.href = url; a.download = `discipline-report-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    a.href = URL.createObjectURL(blob);
+    a.download = kind === 'scores' ? 'score-report.csv' : 'case-report.csv';
+    a.click(); URL.revokeObjectURL(a.href);
   };
 
+  const summary = data?.summary || {};
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold">Reports</h1>
-          <p className="text-sm text-muted-foreground">{TRACK_LABELS[track]} disciplinary report.</p>
+          <p className="text-sm text-muted-foreground">Filter, search and export the discipline record of {organization?.name}.</p>
         </div>
-        <Button disabled={!incidents} onClick={exportCsv}>Export CSV</Button>
+        <div className="flex gap-2">
+          <Button disabled={!data} onClick={() => download('cases')}>Export cases CSV</Button>
+          <Button variant="outline" disabled={!data} onClick={() => download('scores')}>Export scores CSV</Button>
+        </div>
       </div>
       {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-      <Select className="max-w-[180px]" value={termFilter} onChange={e => setTermFilter(e.target.value)} aria-label="Report term">
-        <option value="">All terms</option>
-        <option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option>
-      </Select>
-      {incidents ? (
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchBar value={search} onChange={setSearch} placeholder="Search case number, person, description…" ariaLabel="Search reports" className="max-w-sm" />
+        <Select className="max-w-[170px]" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} aria-label="Filter by status">
+          <option value="">All statuses</option>{STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+        </Select>
+        <Select className="max-w-[160px]" value={severityFilter} onChange={e => setSeverityFilter(e.target.value)} aria-label="Filter by severity">
+          <option value="">All severities</option>{SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
+        </Select>
+        <input type="date" className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={from} onChange={e => setFrom(e.target.value)} aria-label="From date" />
+        <input type="date" className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={to} onChange={e => setTo(e.target.value)} aria-label="To date" />
+      </div>
+      {!data ? <p className="text-muted-foreground">Loading…</p> : (
         <>
-          <div className="grid gap-4 md:grid-cols-3">
-            <StatCard label="Incidents" value={filtered.length} />
-            <StatCard label="Confirmed" value={confirmed} />
-            <StatCard label="Marks deducted" value={totalDeducted} />
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card><CardContent className="p-5"><p className="text-3xl font-bold text-primary">{data.total}</p><p className="text-sm text-muted-foreground">Cases matched</p></CardContent></Card>
+            <Card><CardContent className="p-5"><p className="text-3xl font-bold text-primary">{Object.entries(summary.by_status || {}).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}</p><p className="text-sm text-muted-foreground">By status</p></CardContent></Card>
+            <Card><CardContent className="p-5"><p className="text-3xl font-bold text-primary">{Object.entries(summary.by_severity || {}).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}</p><p className="text-sm text-muted-foreground">By severity</p></CardContent></Card>
+            <Card><CardContent className="p-5"><p className="text-3xl font-bold text-primary">{Object.entries(summary.by_month || {}).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}</p><p className="text-sm text-muted-foreground">By month</p></CardContent></Card>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader><CardTitle className="text-base">By severity</CardTitle></CardHeader>
-              <CardContent>
-                {Object.keys(bySeverity).length === 0 ? <p className="text-sm text-muted-foreground">No incidents in this period.</p>
-                  : Object.entries(bySeverity).map(([sev, count]) => (
-                    <div key={sev} className="flex items-center justify-between py-1 text-sm">
-                      <span>{sev}</span><span className="font-semibold">{count}</span>
-                    </div>
-                  ))}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-base">Top violations</CardTitle></CardHeader>
-              <CardContent>
-                {topViolations.length === 0 ? <p className="text-sm text-muted-foreground">No violations recorded.</p>
-                  : topViolations.map(([name, count]) => (
-                    <div key={name} className="flex items-center justify-between py-1 text-sm">
-                      <span>{name}</span><span className="font-semibold">{count}</span>
-                    </div>
-                  ))}
-              </CardContent>
-            </Card>
+          <div className="overflow-x-auto rounded-lg border bg-card">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b bg-muted/50 text-left text-muted-foreground">
+                <th className="p-3 font-medium">Case</th><th className="p-3 font-medium">Date</th><th className="p-3 font-medium">Person</th>
+                <th className="p-3 font-medium">Category</th><th className="p-3 font-medium">Severity</th>
+                <th className="p-3 font-medium">Marks</th><th className="p-3 font-medium">Status</th>
+              </tr></thead>
+              <tbody>
+                {(data.rows || []).map(r => (
+                  <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
+                    <td className="p-3 font-medium">{r.case_number}</td>
+                    <td className="p-3">{r.incident_date}</td>
+                    <td className="p-3">{r.people?.full_name || '—'}</td>
+                    <td className="p-3">{r.category_name || r.incident_categories?.name || '—'}</td>
+                    <td className="p-3">{r.severity}</td>
+                    <td className="p-3">{r.marks_deducted ?? '—'}</td>
+                    <td className="p-3"><Badge variant="outline">{r.status}</Badge></td>
+                  </tr>
+                ))}
+                {(data.rows || []).length === 0 && <tr><td colSpan="7" className="p-6 text-center text-muted-foreground">No cases match these filters.</td></tr>}
+              </tbody>
+            </table>
           </div>
-          {watchlist.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle className="text-base">Discipline watchlist (lowest annual scores)</CardTitle></CardHeader>
-              <CardContent>
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b text-left text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Student</th><th className="py-2 font-medium">Annual score</th>
-                  </tr></thead>
-                  <tbody>
-                    {watchlist.map(p => (
-                      <tr key={p.id} className="border-b last:border-0">
-                        <td className="py-2 pr-4">{p.full_name}</td><td className="py-2">{p.annual} / 120</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
-          )}
         </>
-      ) : <p className="text-muted-foreground">Loading…</p>}
+      )}
     </div>
   );
 }

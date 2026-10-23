@@ -6,6 +6,24 @@ import { personScores } from '../services/scoring.js';
 
 const router = Router();
 
+// Resolves the .or() search condition for case rows. PostgREST cannot filter
+// embedded resources inside .or(), so matching people are looked up first and
+// the rows are filtered by person_id. Stripping % and , keeps the pattern safe.
+async function searchCondition(search, institutionId) {
+  const s = String(search || '').replace(/[%,]/g, '').trim();
+  if (!s) return null;
+  const { data: matches } = await adminDb.from('people')
+    .select('id').eq('institution_id', institutionId)
+    .or(`full_name.ilike.%${s}%,person_id.ilike.%${s}%`);
+  const conditions = [
+    `case_number.ilike.%${s}%`,
+    `description.ilike.%${s}%`,
+    `location.ilike.%${s}%`
+  ];
+  if (matches?.length) conditions.push(`person_id.in.(${matches.map(m => `"${m.id}"`).join(',')})`);
+  return conditions.join(',');
+}
+
 function buildFilters(query, q) {
   if (q.status) query = query.eq('status', q.status);
   if (q.severity) query = query.eq('severity', q.severity);
@@ -26,6 +44,8 @@ async function fetchCases(req) {
     .select('*, people!inner(full_name, person_id), incident_categories(name)', { count: 'exact' })
     .eq('institution_id', req.institutionId);
   query = buildFilters(query, q);
+  const searchOr = await searchCondition(q.search, req.institutionId);
+  if (searchOr) query = query.or(searchOr);
   const page = Math.max(1, Number.parseInt(q.page || '1', 10) || 1);
   const limit = Math.min(Math.max(Number.parseInt(q.limit || '50', 10) || 50, 1), 1000);
   const { data, error, count } = await query.order('incident_date', { ascending: false }).range((page - 1) * limit, page * limit - 1);

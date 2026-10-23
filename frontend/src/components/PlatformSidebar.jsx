@@ -10,13 +10,12 @@ import { signOut } from '../lib/auth.js';
 
 const items = [
   { to: '/platform', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/platform/organizations', label: 'Organizations', icon: Building2 },
+  { to: '/platform/organizations', label: 'Institutions', icon: Building2 },
   { to: '/platform/users', label: 'Users', icon: Users },
   { to: '/platform/audit-logs', label: 'Audit logs', icon: ScrollText },
   { to: '/platform/contributors', label: 'Contributors', icon: HeartHandshake },
   { to: '/platform/creator-profile', label: 'Creator profile', icon: UserCog },
   { to: '/platform/help-center', label: 'Help center', icon: LifeBuoy },
-  { to: '/platform/backups', label: 'Backups', icon: DatabaseBackup },
   { to: '/platform/system-control', label: 'System control', icon: SlidersHorizontal }
 ];
 

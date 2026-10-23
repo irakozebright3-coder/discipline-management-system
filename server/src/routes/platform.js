@@ -34,12 +34,21 @@ router.get('/dashboard', async (req, res) => {
   });
 });
 
-router.get('/institutions', async (_req, res) => {
-  const { data } = await adminDb.from('institutions').select('*').order('created_at', { ascending: false });
+router.get('/institutions', async (req, res) => {
+  // status and type are enum columns, which PostgREST cannot ilike, so the
+  // search runs over the fetched rows here instead of in the database.
+  const { data, error } = await adminDb.from('institutions').select('*').order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: 'Could not load institutions.' });
+  let rows = data || [];
+  const needle = String(req.query.search || '').replace(/[%,]/g, '').trim().toLowerCase();
+  if (needle) {
+    rows = rows.filter(i => [i.name, i.track, i.status, i.type]
+      .some(v => String(v || '').toLowerCase().includes(needle)));
+  }
   const { data: memberCounts } = await adminDb.from('institution_memberships').select('institution_id').eq('status', 'active');
   const counts = {};
   for (const m of memberCounts || []) counts[m.institution_id] = (counts[m.institution_id] || 0) + 1;
-  res.json({ data: (data || []).map(i => ({ ...i, member_count: counts[i.id] || 0 })) });
+  res.json({ data: rows.map(i => ({ ...i, member_count: counts[i.id] || 0 })) });
 });
 
 const instPatch = z.object({ status: z.enum(['active', 'suspended', 'archived']).optional(), name: z.string().min(2).max(200).optional() });
@@ -56,28 +65,49 @@ router.patch('/institutions/:id', async (req, res) => {
   res.json({ data });
 });
 
-router.get('/users', async (_req, res) => {
+router.get('/users', async (req, res) => {
   const directory = await listUserDirectory(10);
+  const needle = String(req.query.search || '').trim().toLowerCase();
+  const matching = needle
+    ? Object.values(directory.byId).filter(u =>
+        (u.email || '').toLowerCase().includes(needle) || (u.full_name || '').toLowerCase().includes(needle))
+    : null;
   const { data: memberships } = await adminDb.from('institution_memberships').select('user_id, role, status, institution_id');
   const byUser = {};
   for (const m of memberships || []) (byUser[m.user_id] = byUser[m.user_id] || []).push(m);
   const { data: settings } = await adminDb.from('platform_settings').select('app_settings').eq('id', 1).maybeSingle();
   const owners = new Set(settings?.app_settings?.owner_ids || []);
   res.json({
-    data: Object.values(directory.byId).map(u => ({
+    data: (matching || Object.values(directory.byId)).map(u => ({
       id: u.id, email: u.email, full_name: u.full_name, created_at: u.created_at,
       is_owner: owners.has(u.id), memberships: (byUser[u.id] || []).length
     })).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
   });
 });
 
-router.get('/audit-logs', async (_req, res) => {
-  const { data } = await adminDb.from('platform_audit_logs').select('*').order('created_at', { ascending: false }).limit(200);
+router.get('/audit-logs', async (req, res) => {
+  let query = adminDb.from('platform_audit_logs').select('*').order('created_at', { ascending: false }).limit(200);
+  if (req.query.search) {
+    const s = String(req.query.search).replace(/[%,]/g, '');
+    query = query.or(`action.ilike.%${s}%,target.ilike.%${s}%,user_name.ilike.%${s}%`);
+  }
+  const { data } = await query;
   res.json({ data: data || [] });
 });
 
-router.get('/org-audit-logs', async (_req, res) => {
-  const { data } = await adminDb.from('audit_logs').select('*, institutions(name)').order('created_at', { ascending: false }).limit(200);
+router.get('/org-audit-logs', async (req, res) => {
+  let query = adminDb.from('audit_logs').select('*, institutions(name)').order('created_at', { ascending: false }).limit(200);
+  const s = String(req.query.search || '').replace(/[%,]/g, '').trim();
+  if (s) {
+    // Embedded-resource filters are not supported inside .or(); resolve
+    // matching institutions first and filter audit rows by institution_id.
+    const { data: insts } = await adminDb.from('institutions').select('id').or(`name.ilike.%${s}%`);
+    const conditions = [`action.ilike.%${s}%`, `actor_name.ilike.%${s}%`];
+    if (insts?.length) conditions.push(`institution_id.in.(${insts.map(i => `"${i.id}"`).join(',')})`);
+    query = query.or(conditions.join(','));
+  }
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: 'Could not load the audit log.' });
   res.json({ data: data || [] });
 });
 

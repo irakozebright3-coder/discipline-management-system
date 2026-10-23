@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { platformGet, platformPatch } from '../../lib/api.js';
+import { platformGet, platformPut } from '../../lib/api.js';
 import { Button } from '../../components/ui/button.jsx';
 import { Input } from '../../components/ui/input.jsx';
 import { Label } from '../../components/ui/label.jsx';
@@ -13,14 +13,14 @@ export default function CreatorProfileManage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    platformGet('creator-profile').then(({ data }) => setCreator(data)).catch(e => setError(e.message));
+    platformGet('owner-profile').then(({ data }) => setCreator(data)).catch(e => setError(e.message));
   }, []);
 
   const save = async (e) => {
     e.preventDefault();
     setBusy(true); setError(''); setNotice('');
     try {
-      const { data } = await platformPatch('creator-profile', creator);
+      const { data } = await platformPut('owner-profile', creator);
       setCreator(data); setNotice('Profile saved.');
     } catch (e2) { setError(e2.message); } finally { setBusy(false); }
   };

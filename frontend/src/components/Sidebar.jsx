@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import SdmsLogo from './SdmsLogo.jsx';
 import { cn } from '../lib/utils.js';
-import { useOrg } from '../hooks/useOrg.jsx';
+import { useOrg, ROLE_LABELS } from '../hooks/useOrg.jsx';
 import { signOut } from '../lib/auth.js';
 import { platformGet } from '../lib/api.js';
 
@@ -14,7 +14,7 @@ const items = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/people', label: 'People', icon: Users },
   { to: '/incidents', label: 'Incidents', icon: FileWarning },
-  { to: '/violations', label: 'Violations', icon: ListChecks },
+  { to: '/categories', label: 'Categories', icon: ListChecks },
   { to: '/structure', label: 'Structure', icon: Network },
   { to: '/history', label: 'History', icon: History },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
@@ -60,7 +60,7 @@ export default function Sidebar() {
         {orgs.length === 0 && <option value="">No organization yet</option>}
         {orgs.map((item) => <option key={item.organization.id} value={item.organization.id}>{item.organization.name}</option>)}
       </select>
-      {membership && <p className="mt-1 text-xs text-muted-foreground">Your role: {membership.role}</p>}
+      {membership && <p className="mt-1 text-xs text-muted-foreground">Your role: {ROLE_LABELS[membership.role] || membership.role}</p>}
     </div>
   );
 
