@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="dmbrown" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C08A57"/>
+      <stop offset="1" stop-color="#7A4A26"/>
+    </linearGradient>
+  </defs>
+  <path d="M32 3l24 8v19c0 15.4-10.1 26.4-24 31C18.1 56.4 8 45.4 8 30V11z" fill="url(#dmbrown)"/>
+  <path d="M32 3l24 8v19c0 15.4-10.1 26.4-24 31C18.1 56.4 8 45.4 8 30V11z" fill="none" stroke="#F5C542" stroke-width="2.6" stroke-linejoin="round"/>
+  <line x1="17.5" y1="21.5" x2="46.5" y2="21.5" stroke="#FAF5EE" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="32" y1="21.5" x2="32" y2="40.5" stroke="#FAF5EE" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="32" cy="21.5" r="3" fill="#F5C542"/>
+  <path d="M17.5 21.5l-4.8 8.4h9.6z" fill="#FAF5EE"/>
+  <path d="M46.5 21.5l-4.8 8.4h9.6z" fill="#FAF5EE"/>
+  <line x1="25" y1="44" x2="39" y2="44" stroke="#3B82F6" stroke-width="2.8" stroke-linecap="round"/>
+</svg>

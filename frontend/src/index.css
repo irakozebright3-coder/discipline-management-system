@@ -3,52 +3,54 @@
 @tailwind utilities;
 
 /*
- * DM design tokens. The application defaults to the established midnight-blue
- * palette so authenticated pages and the public experience feel like one product.
- * The .dark variant is retained for any components that opt into it explicitly.
+ * DM design tokens. Brown is the primary brand color: warm caramel-brown
+ * surfaces pair with a near-black background, yellow highlights, and a blue
+ * focus ring so authenticated pages and the public experience feel like one
+ * product. The .dark variant mirrors the root values for components that opt
+ * into it explicitly.
  */
 @layer base {
   :root {
     color-scheme: dark;
-    --background: 222 47% 7%;
-    --foreground: 210 40% 98%;
-    --card: 221 35% 14%;
-    --card-foreground: 210 40% 98%;
-    --primary: 258 90% 66%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 27% 17%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 220 27% 16%;
-    --muted-foreground: 215 18% 67%;
-    --accent: 222 28% 21%;
-    --accent-foreground: 252 100% 91%;
+    --background: 26 16% 8%;
+    --foreground: 36 30% 95%;
+    --card: 26 14% 12%;
+    --card-foreground: 36 30% 95%;
+    --primary: 28 46% 56%;
+    --primary-foreground: 26 45% 10%;
+    --secondary: 26 12% 17%;
+    --secondary-foreground: 36 24% 92%;
+    --muted: 26 13% 15%;
+    --muted-foreground: 33 13% 70%;
+    --accent: 46 94% 55%;
+    --accent-foreground: 40 70% 10%;
     --destructive: 0 68% 54%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 25% 23%;
-    --input: 220 25% 23%;
-    --ring: 258 90% 66%;
+    --border: 26 12% 21%;
+    --input: 26 12% 21%;
+    --ring: 215 88% 62%;
     --radius: 0.75rem;
   }
 
   .dark {
     color-scheme: dark;
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-    --card: 221 38% 12%;
-    --card-foreground: 210 40% 98%;
-    --primary: 258 90% 70%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 27% 16%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 220 27% 15%;
-    --muted-foreground: 215 18% 68%;
-    --accent: 222 28% 20%;
-    --accent-foreground: 252 100% 92%;
+    --background: 26 16% 6%;
+    --foreground: 36 30% 95%;
+    --card: 26 15% 11%;
+    --card-foreground: 36 30% 95%;
+    --primary: 28 50% 60%;
+    --primary-foreground: 26 45% 10%;
+    --secondary: 26 12% 16%;
+    --secondary-foreground: 36 24% 92%;
+    --muted: 26 13% 14%;
+    --muted-foreground: 33 13% 68%;
+    --accent: 46 94% 57%;
+    --accent-foreground: 40 70% 10%;
     --destructive: 0 64% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 25% 21%;
-    --input: 220 25% 21%;
-    --ring: 258 90% 70%;
+    --border: 26 12% 19%;
+    --input: 26 12% 19%;
+    --ring: 215 88% 62%;
   }
 
   * {
@@ -77,7 +79,7 @@
 
   ::selection {
     color: #ffffff;
-    background: rgba(139, 92, 246, .42);
+    background: rgba(176, 125, 79, .45);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -89,4 +91,11 @@
       scroll-behavior: auto !important;
     }
   }
+}
+
+/* Signature brand strip: brown -> yellow -> blue, used on app shells. */
+.dm-brand-strip {
+  height: 0.2rem;
+  width: 100%;
+  background: linear-gradient(90deg, #7a4a26 0%, #b07d4f 30%, #f5c542 60%, #3b82f6 100%);
 }
