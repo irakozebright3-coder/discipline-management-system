@@ -4,7 +4,7 @@
 
 /*
  * DM design tokens. Brown is the primary brand color: warm caramel-brown
- * surfaces pair with a near-black background, yellow highlights, and a blue
+ * surfaces pair with a near-black background, yellow highlights, and a yellow
  * focus ring so authenticated pages and the public experience feel like one
  * product. The .dark variant mirrors the root values for components that opt
  * into it explicitly.
@@ -28,7 +28,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 26 12% 21%;
     --input: 26 12% 21%;
-    --ring: 215 88% 62%;
+    --ring: 46 94% 55%;
     --radius: 0.75rem;
   }
 
@@ -50,7 +50,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 26 12% 19%;
     --input: 26 12% 19%;
-    --ring: 215 88% 62%;
+    --ring: 46 94% 55%;
   }
 
   * {
@@ -93,9 +93,9 @@
   }
 }
 
-/* Signature brand strip: brown -> yellow -> blue, used on app shells. */
+/* Signature brand strip: brown to yellow, used on app shells. */
 .dm-brand-strip {
   height: 0.2rem;
   width: 100%;
-  background: linear-gradient(90deg, #7a4a26 0%, #b07d4f 30%, #f5c542 60%, #3b82f6 100%);
+  background: linear-gradient(90deg, #7a4a26 0%, #b07d4f 35%, #f5c542 100%);
 }

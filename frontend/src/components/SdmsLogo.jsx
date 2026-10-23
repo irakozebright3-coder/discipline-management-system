@@ -1,7 +1,7 @@
 import { cn } from '../lib/utils.js';
 
 // The Discipline Management mark: a caramel-brown shield with a balance
-// scale, yellow rim, and blue base — the same artwork as the site favicon.
+// scale, yellow rim and yellow base — the same artwork as the site favicon.
 export function LogoMark({ className }) {
   return (
     <svg viewBox="0 0 64 64" className={cn('h-8 w-8 shrink-0', className)} role="img" aria-label="Discipline Management logo">
@@ -18,7 +18,7 @@ export function LogoMark({ className }) {
       <circle cx="32" cy="21.5" r="3" fill="#F5C542" />
       <path d="M17.5 21.5l-4.8 8.4h9.6z" fill="#FAF5EE" />
       <path d="M46.5 21.5l-4.8 8.4h9.6z" fill="#FAF5EE" />
-      <line x1="25" y1="44" x2="39" y2="44" stroke="#3B82F6" strokeWidth="2.8" strokeLinecap="round" />
+      <line x1="25" y1="44" x2="39" y2="44" stroke="#F5C542" strokeWidth="2.8" strokeLinecap="round" />
     </svg>
   );
 }
