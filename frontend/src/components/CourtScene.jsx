@@ -12,9 +12,9 @@ export default function CourtScene({ className = '' }) {
 
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
-    camera.position.set(0, 3.1, 8.6);
-    camera.lookAt(0, 0.55, 0);
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+    camera.position.set(0, 4.4, 8.4);
+    camera.lookAt(0, 0.9, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -87,21 +87,30 @@ export default function CourtScene({ className = '' }) {
     const f2 = frame(W - 1.2, D - 0.8, 0.025); f2.position.set(0.12, coverY, 0);
     book.add(f1, f2);
 
+    // Scales of justice, raised slightly off the cover so it reads clearly.
     const emblem = new THREE.Group();
-    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.9, 16), gold);
-    pillar.position.y = 0.45 * 0.0 + 0.006;
-    pillar.rotation.x = Math.PI / 2;
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.014, 0.045), gold);
-    beam.position.y = 0.006; beam.position.z = -0.3;
-    const mkPan = (x) => {
-      const pan = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.014, 32), gold);
-      pan.position.set(x, 0.006, 0.05);
-      return pan;
-    };
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.02, 32), gold);
-    base.position.set(0, 0.008, 0.45);
-    emblem.add(pillar, beam, mkPan(-0.5), mkPan(0.5), base);
-    emblem.position.set(0.12, coverY, 0.15);
+    const m = (geo, x, y, z) => { const o = new THREE.Mesh(geo, gold); o.position.set(x, y, z); o.castShadow = true; return o; };
+    emblem.add(m(new THREE.CylinderGeometry(0.34, 0.4, 0.05, 40), 0, 0.025, 0.62));     // base
+    emblem.add(m(new THREE.CylinderGeometry(0.05, 0.07, 1.25, 20), 0, 0.65, 0.62));     // post
+    emblem.add(m(new THREE.SphereGeometry(0.09, 20, 20), 0, 1.31, 0.62));                // finial
+    const beamMesh = m(new THREE.BoxGeometry(1.9, 0.07, 0.07), 0, 1.18, 0.62);           // beam
+    emblem.add(beamMesh);
+    [-0.88, 0.88].forEach(x => {
+      // hanging strings
+      const stringGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.62, 6);
+      [[-0.2, -0.0], [0.2, -0.0]].forEach(([dx]) => {
+        const st = m(stringGeo, x + dx * 0.7, 0.86, 0.62); st.rotation.z = dx > 0 ? -0.33 : 0.33; emblem.add(st);
+      });
+      const pan = m(new THREE.CylinderGeometry(0.34, 0.3, 0.06, 40), x, 0.54, 0.62);     // pan
+      emblem.add(pan);
+    });
+    emblem.scale.setScalar(0.78);
+    emblem.rotation.x = -Math.PI / 2 + 0.0;   // stand it up facing the viewer, lying on the cover
+    emblem.position.set(0.12, coverY + 0.02, -0.15);
+    emblem.rotation.set(0, 0, 0);
+    // Lay flat: rotate about X so +Y (height) maps to -Z (toward the spine's far edge)
+    emblem.rotation.x = -Math.PI / 2;
+    emblem.position.set(0.12, coverY + 0.03, 0.35);
     book.add(emblem);
 
     // Spine bands.
@@ -135,15 +144,15 @@ export default function CourtScene({ className = '' }) {
     knob.position.y = -2.08;
     [head, capL, capR, ringL, ringR, handle, knob].forEach(m => { m.castShadow = true; gavel.add(m); });
 
-    // Rest the gavel diagonally across the cover.
-    gavel.position.set(0.25, T + PAGE_H + T + 0.5, 0.55);
-    gavel.rotation.set(0, -0.55, 0);
-    gavel.rotation.z = 0;
+    // Gavel lies across the top-right of the cover; head over the sound block, handle toward the viewer.
+    const coverTop = T + PAGE_H + T;
     const gavelPivot = new THREE.Group();
+    gavel.rotation.set(0, 0, 0);
+    gavel.rotation.x = Math.PI / 2;              // handle points toward +Z (viewer)
+    gavel.position.set(0, 0.46, 0);              // head radius 0.37 + clearance, so it rests on the block
     gavelPivot.add(gavel);
-    // Lay the handle flat: the gavel's "down" axis becomes horizontal.
-    gavel.rotation.x = Math.PI / 2 - 0.02;
-    gavel.position.set(0.1, T + PAGE_H + T + 0.38, 0.2);
+    gavelPivot.position.set(0.8, coverTop + 0.14, -0.95);
+    gavelPivot.rotation.y = 0.5;
     group.add(gavelPivot);
 
     // Sound block under the gavel head for the tap animation.
@@ -162,7 +171,7 @@ export default function CourtScene({ className = '' }) {
     scene.add(ground);
 
     group.rotation.y = -0.5;
-    group.position.y = -0.55;
+    group.position.y = -0.35;
 
     // ---------- Sizing and loop ----------
     const resize = () => {
@@ -172,7 +181,7 @@ export default function CourtScene({ className = '' }) {
       renderer.domElement.style.width = '100%';
       renderer.domElement.style.height = '100%';
       camera.aspect = w / h;
-      camera.fov = w / h < 1 ? 44 : 32;
+      camera.fov = w / h < 1 ? 42 : 30;
       camera.updateProjectionMatrix();
     };
     resize();
@@ -204,8 +213,8 @@ export default function CourtScene({ className = '' }) {
         // Periodic gavel tap: lift and strike.
         const cycle = (t % 4.2) / 4.2;
         const lift = cycle < 0.5 ? Math.sin((cycle / 0.5) * Math.PI) : 0;
-        gavel.position.y = T + PAGE_H + T + 0.38 + lift * 0.28 + book.position.y;
-        gavel.rotation.z = -lift * 0.22;
+        gavelPivot.rotation.x = -lift * 0.42;
+        gavelPivot.position.y = T + PAGE_H + T + 0.14 + book.position.y;
       }
       renderer.render(scene, camera);
     };
