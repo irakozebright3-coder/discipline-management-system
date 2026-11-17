@@ -70,4 +70,45 @@ router.post('/support', async (req, res) => {
   res.status(201).json({ data: { received: true } });
 });
 
+// ---------- Subscribe for founder updates (email or phone) ----------
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PHONE_RE = /^\+?[1-9]\d{6,14}$/;
+
+// Returns { contact, type } or null. Emails are lowercased; phones lose spaces, dashes and brackets.
+export function normaliseContact(raw) {
+  const v = String(raw || '').trim();
+  if (!v || v.length > 200) return null;
+  if (v.includes('@')) return EMAIL_RE.test(v) ? { contact: v.toLowerCase(), type: 'email' } : null;
+  const digits = v.replace(/[\s\-().]/g, '');
+  return PHONE_RE.test(digits) ? { contact: digits, type: 'phone' } : null;
+}
+
+const subscribeSchema = z.object({
+  contact: z.string().min(1, 'Enter your email or phone number.').max(200),
+  website: z.string().max(0).optional() // honeypot
+});
+
+router.post('/subscribe', async (req, res) => {
+  const parsed = subscribeSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error, 'Enter your email or phone number.') });
+  if (parsed.data.website) return res.status(201).json({ data: { subscribed: true } }); // bots get a fake success
+  const c = normaliseContact(parsed.data.contact);
+  if (!c) return res.status(400).json({ error: 'That does not look like a valid email or phone number. For a phone, include the country code, e.g. +250788123456.' });
+
+  // Throttle: a flood of new subscriptions from one burst is almost certainly a bot.
+  const { count: recent } = await adminDb.from('subscribers').select('id', { count: 'exact', head: true })
+    .gte('created_at', new Date(Date.now() - 60 * 1000).toISOString());
+  if ((recent || 0) >= 30) return res.status(429).json({ error: 'Too many sign-ups right now. Please try again in a minute.' });
+
+  const { data: existing } = await adminDb.from('subscribers').select('id, status').eq('contact', c.contact).maybeSingle();
+  if (existing) {
+    if (existing.status === 'unsubscribed') await adminDb.from('subscribers').update({ status: 'active', updated_at: new Date().toISOString() }).eq('id', existing.id);
+    // Same answer either way, so the form can't be used to discover who is subscribed.
+    return res.status(200).json({ data: { subscribed: true, type: c.type } });
+  }
+  const { error } = await adminDb.from('subscribers').insert({ contact: c.contact, contact_type: c.type, source: 'landing' });
+  if (error) return res.status(500).json({ error: 'Could not save your subscription right now. Please try again.' });
+  res.status(201).json({ data: { subscribed: true, type: c.type } });
+});
+
 export default router;

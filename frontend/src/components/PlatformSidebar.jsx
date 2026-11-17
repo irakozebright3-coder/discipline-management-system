@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, ScrollText, HeartHandshake, UserCog,
-  LifeBuoy, DatabaseBackup, SlidersHorizontal, LogOut, Menu, X
+  LifeBuoy, BellRing, DatabaseBackup, SlidersHorizontal, LogOut, Menu, X
 } from 'lucide-react';
 import SdmsLogo from './SdmsLogo.jsx';
 import { cn } from '../lib/utils.js';
@@ -12,6 +12,7 @@ const items = [
   { to: '/platform', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/platform/organizations', label: 'Institutions', icon: Building2 },
   { to: '/platform/users', label: 'Users', icon: Users },
+  { to: '/platform/subscribers', label: 'Subscribers', icon: BellRing },
   { to: '/platform/audit-logs', label: 'Audit logs', icon: ScrollText },
   { to: '/platform/contributors', label: 'Contributors', icon: HeartHandshake },
   { to: '/platform/creator-profile', label: 'Creator profile', icon: UserCog },

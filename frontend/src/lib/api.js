@@ -128,6 +128,7 @@ export const submitSupportRequest = (payload) => publicRequest('/support', {
   body: JSON.stringify(payload)
 });
 export const getSubscriptionPlans = () => publicRequest('/subscription-plans');
+export const subscribeForUpdates = (contact, website = '') => publicRequest('/subscribe', { method: 'POST', body: JSON.stringify({ contact, website }) });
 
 // ---------- Portals (class / trade rosters, discipline levels, deductions) ----------
 export const getDisciplineOverview = (institutionId) => apiRequest(`/api/portals/overview${qs({ institution_id: institutionId })}`);

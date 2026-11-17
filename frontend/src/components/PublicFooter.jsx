@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom';
 import SdmsLogo from './SdmsLogo.jsx';
+import SubscribeBar from './SubscribeBar.jsx';
 
 export default function PublicFooter() {
   const year = new Date().getFullYear();
 
   return (
     <footer className="dm-public-footer border-t">
+      <SubscribeBar variant="footer" />
       <div className="dm-footer-inner mx-auto flex max-w-6xl flex-col items-start justify-between gap-5 px-4 py-8 md:flex-row md:items-center">
         <div className="flex flex-col gap-2">
           <Link to="/" aria-label="Discipline Management home">

@@ -212,4 +212,70 @@ router.get('/system-health', async (_req, res) => {
   } });
 });
 
+// ---------- Subscribers (people who asked for founder updates) ----------
+router.get('/subscribers', async (req, res) => {
+  const needle = String(req.query.search || '').trim().toLowerCase().replace(/[%,]/g, '');
+  let q = adminDb.from('subscribers').select('*').order('created_at', { ascending: false }).limit(1000);
+  if (needle) q = q.ilike('contact', `%${needle}%`);
+  const { data, error } = await q;
+  if (error) return res.status(500).json({ error: 'Could not load subscribers.' });
+  const rows = data || [];
+  res.json({ data: rows, counts: {
+    total: rows.length,
+    active: rows.filter(r => r.status === 'active').length,
+    emails: rows.filter(r => r.contact_type === 'email' && r.status === 'active').length,
+    phones: rows.filter(r => r.contact_type === 'phone' && r.status === 'active').length
+  } });
+});
+
+router.delete('/subscribers/:id', async (req, res) => {
+  const { data: row } = await adminDb.from('subscribers').select('id, contact').eq('id', req.params.id).maybeSingle();
+  if (!row) return res.status(404).json({ error: 'Subscriber not found.' });
+  await adminDb.from('subscribers').delete().eq('id', row.id);
+  await adminDb.from('platform_audit_logs').insert({ action: 'subscriber.delete', target: row.contact, details: '{}', user_name: req.user.email, actor_id: req.user.id, result: 'Success' });
+  res.json({ data: { deleted: true } });
+});
+
+// ---------- Delete a created account ----------
+// Records the user created are kept (their creator link is cleared by the database);
+// their memberships, notifications and profile are removed with the account.
+router.delete('/users/:id', async (req, res) => {
+  const targetId = req.params.id;
+  if (!/^[0-9a-f-]{36}$/i.test(targetId)) return res.status(400).json({ error: 'Invalid user.' });
+  if (targetId === req.user.id) return res.status(400).json({ error: 'You cannot delete your own account from here.' });
+
+  const { data: settings } = await adminDb.from('platform_settings').select('app_settings').eq('id', 1).maybeSingle();
+  const owners = settings?.app_settings?.owner_ids || [];
+  if (owners.includes(targetId)) return res.status(403).json({ error: 'Platform owner accounts cannot be deleted here. Remove the owner role first.' });
+
+  const { data: found, error: findErr } = await adminDb.auth.admin.getUserById(targetId);
+  if (findErr || !found?.user) return res.status(404).json({ error: 'That account no longer exists.' });
+  const email = found.user.email;
+
+  // Warn (and require confirmation) when this would leave an institution with no admin.
+  const { data: mine } = await adminDb.from('institution_memberships').select('institution_id, role, status').eq('user_id', targetId);
+  const adminOf = (mine || []).filter(m => m.role === 'institution_admin' && m.status === 'active').map(m => m.institution_id);
+  const orphaned = [];
+  for (const instId of adminOf) {
+    const { count } = await adminDb.from('institution_memberships').select('id', { count: 'exact', head: true })
+      .eq('institution_id', instId).eq('role', 'institution_admin').eq('status', 'active').neq('user_id', targetId);
+    if (!count) {
+      const { data: inst } = await adminDb.from('institutions').select('name').eq('id', instId).maybeSingle();
+      orphaned.push(inst?.name || instId);
+    }
+  }
+  if (orphaned.length && req.query.confirm !== 'true') {
+    return res.status(409).json({ error: `Deleting this account leaves ${orphaned.join(', ')} with no administrator.`, needs_confirmation: true, orphaned });
+  }
+
+  const { error } = await adminDb.auth.admin.deleteUser(targetId);
+  if (error) return res.status(500).json({ error: 'Could not delete the account. Please try again.' });
+  await adminDb.from('platform_audit_logs').insert({
+    action: 'user.delete', target: email || targetId,
+    details: JSON.stringify({ memberships: (mine || []).length, institutions_left_without_admin: orphaned }),
+    user_name: req.user.email, actor_id: req.user.id, result: 'Success'
+  });
+  res.json({ data: { deleted: true } });
+});
+
 export default router;

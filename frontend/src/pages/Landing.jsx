@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { getCommunityStats, getCreatorProfile } from '../lib/api.js';
 import MemberGallery from '../components/MemberGallery.jsx';
+import SubscribeBar from '../components/SubscribeBar.jsx';
 import { TRACKS, membersByTrack } from '../lib/memberGallery.js';
 import '../styles/landing.css';
 
@@ -246,6 +247,8 @@ export default function Landing() {
         </div>
         <div className="dm-hero-bottom-fade" aria-hidden="true" />
       </section>
+
+      <div className="dm-subscribe-wrap" style={{ padding: '0 1.25rem', marginTop: '-1.5rem', position: 'relative', zIndex: 2 }}><SubscribeBar variant="banner" /></div>
 
       {stats && (
         <section className="dm-live-stats" aria-label="Live platform statistics" data-reveal>

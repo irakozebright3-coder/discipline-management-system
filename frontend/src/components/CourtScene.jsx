@@ -125,44 +125,50 @@ export default function CourtScene({ className = '' }) {
     book.position.y = 0;
     group.add(book);
 
-    // ---------- Gavel ----------
+    // ---------- Gavel (stands upright on the book) ----------
     const wood = new THREE.MeshStandardMaterial({ color: 0x8a4b1f, roughness: 0.42, metalness: 0.04 });
     const woodDark = new THREE.MeshStandardMaterial({ color: 0x5e3011, roughness: 0.5 });
+    const coverTop = T + PAGE_H + T;          // y of the book's top surface
+
+    // Origin = the point where the gavel's foot touches the cover, so tilting pivots from there.
+    const HANDLE_H = 1.9;
     const gavel = new THREE.Group();
 
-    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 1.25, 40), wood);
-    head.rotation.z = Math.PI / 2;
-    const capL = new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.11, 40), woodDark);
-    capL.rotation.z = Math.PI / 2; capL.position.x = -0.5;
-    const capR = capL.clone(); capR.position.x = 0.5;
-    const ringL = new THREE.Mesh(new THREE.TorusGeometry(0.37, 0.025, 12, 48), gold);
-    ringL.rotation.y = Math.PI / 2; ringL.position.x = -0.38;
-    const ringR = ringL.clone(); ringR.position.x = 0.38;
-    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.095, 2.1, 24), wood);
-    handle.position.y = -1.0;
-    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 24), woodDark);
-    knob.position.y = -2.08;
-    [head, capL, capR, ringL, ringR, handle, knob].forEach(m => { m.castShadow = true; gavel.add(m); });
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 24), woodDark);      // rounded butt end
+    foot.position.y = 0.13;
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.095, HANDLE_H, 24), wood);
+    handle.position.y = 0.13 + HANDLE_H / 2;
+    const gripBand = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.07, 24), gold);
+    gripBand.position.y = 0.55;
 
-    // Gavel lies across the top-right of the cover; head over the sound block, handle toward the viewer.
-    const coverTop = T + PAGE_H + T;
+    // Head: a barrel lying along X, centred on top of the handle.
+    const HEAD_Y = 0.13 + HANDLE_H + 0.1;
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 1.25, 40), wood);
+    head.rotation.z = Math.PI / 2; head.position.y = HEAD_Y;
+    const capL = new THREE.Mesh(new THREE.CylinderGeometry(0.375, 0.375, 0.11, 40), woodDark);
+    capL.rotation.z = Math.PI / 2; capL.position.set(-0.56, HEAD_Y, 0);
+    const capR = capL.clone(); capR.position.x = 0.56;
+    const ringL = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.025, 12, 48), gold);
+    ringL.rotation.y = Math.PI / 2; ringL.position.set(-0.4, HEAD_Y, 0);
+    const ringR = ringL.clone(); ringR.position.x = 0.4;
+    [foot, handle, gripBand, head, capL, capR, ringL, ringR].forEach(m => { m.castShadow = true; gavel.add(m); });
+
+    // Pivot sits on the cover. Gavel stands at the right of the emblem, turned to show its head side-on.
     const gavelPivot = new THREE.Group();
-    gavel.rotation.set(0, 0, 0);
-    gavel.rotation.x = Math.PI / 2;              // handle points toward +Z (viewer)
-    gavel.position.set(0, 0.46, 0);              // head radius 0.37 + clearance, so it rests on the block
     gavelPivot.add(gavel);
-    gavelPivot.position.set(0.8, coverTop + 0.14, -0.95);
-    gavelPivot.rotation.y = 0.5;
+    gavelPivot.position.set(0.95, coverTop, -0.2);
+    gavelPivot.rotation.y = 0.35;
     group.add(gavelPivot);
 
-    // Sound block under the gavel head for the tap animation.
+    // Sound block the gavel strikes, set in front of it on the cover.
     const blockMat = new THREE.MeshStandardMaterial({ color: 0x4a2410, roughness: 0.5 });
-    const soundBlock = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.58, 0.14, 40), blockMat);
-    soundBlock.position.set(0.8, T + PAGE_H + T + 0.07, -0.95);
-    soundBlock.castShadow = true;
+    const BLOCK_X = 0.55, BLOCK_Z = 1.25;
+    const soundBlock = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.54, 0.14, 40), blockMat);
+    soundBlock.position.set(BLOCK_X, coverTop + 0.07, BLOCK_Z);
+    soundBlock.castShadow = true; soundBlock.receiveShadow = true;
     group.add(soundBlock);
-    const goldRing = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.018, 10, 60), gold);
-    goldRing.rotation.x = Math.PI / 2; goldRing.position.set(0.8, T + PAGE_H + T + 0.13, -0.95);
+    const goldRing = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.018, 10, 60), gold);
+    goldRing.rotation.x = Math.PI / 2; goldRing.position.set(BLOCK_X, coverTop + 0.13, BLOCK_Z);
     group.add(goldRing);
 
     // Ground shadow catcher and soft glow disc.
@@ -210,11 +216,12 @@ export default function CourtScene({ className = '' }) {
         group.rotation.y = -0.5 + Math.sin(t * 0.35) * 0.32 + pointer.x * 0.25;
         group.rotation.x = pointer.y * 0.06;
         book.position.y = Math.sin(t * 0.9) * 0.05;
-        // Periodic gavel tap: lift and strike.
-        const cycle = (t % 4.2) / 4.2;
-        const lift = cycle < 0.5 ? Math.sin((cycle / 0.5) * Math.PI) : 0;
-        gavelPivot.rotation.x = -lift * 0.42;
-        gavelPivot.position.y = T + PAGE_H + T + 0.14 + book.position.y;
+        // The gavel stands on its foot and sways very slightly, as if balanced.
+        gavelPivot.rotation.x = Math.sin(t * 0.8) * 0.025;
+        gavelPivot.rotation.z = Math.sin(t * 0.6 + 1) * 0.02;
+        gavelPivot.position.y = coverTop + book.position.y;
+        soundBlock.position.y = coverTop + 0.07 + book.position.y;
+        goldRing.position.y = coverTop + 0.13 + book.position.y;
       }
       renderer.render(scene, camera);
     };
