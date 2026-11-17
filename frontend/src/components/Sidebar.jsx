@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileWarning, ListChecks, Network, History, BarChart3,
-  Settings2, LogOut, Building2, Menu, X
+  Settings2, LogOut, Building2, Menu, X, School
 } from 'lucide-react';
 import SdmsLogo from './SdmsLogo.jsx';
 import { cn } from '../lib/utils.js';
@@ -13,6 +13,7 @@ import { platformGet } from '../lib/api.js';
 const items = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/people', label: 'People', icon: Users },
+  { to: '/portals', label: 'Class portals', icon: School, track: 'HIGH_SCHOOL' },
   { to: '/incidents', label: 'Incidents', icon: FileWarning },
   { to: '/categories', label: 'Categories', icon: ListChecks },
   { to: '/structure', label: 'Structure', icon: Network },
@@ -66,7 +67,7 @@ export default function Sidebar() {
 
   const renderNavigation = () => (
     <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Workspace navigation">
-      {items.map(({ to, label, icon: Icon }) => (
+      {items.filter(i => !i.track || organization?.track === i.track).map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}

@@ -14,6 +14,7 @@ import auditRoutes from './routes/audit.js';
 import reports from './routes/reports.js';
 import profiles from './routes/profiles.js';
 import dashboard from './routes/dashboard.js';
+import portals from './routes/portals.js';
 import platform from './routes/platform.js';
 import { requireAuth } from './middleware/auth.js';
 import { isPlatformOwner } from './middleware/auth.js';
@@ -41,6 +42,7 @@ app.use('/api/scoring', scoring);
 app.use('/api/audit-logs', auditRoutes);
 app.use('/api/reports', reports);
 app.use('/api/dashboard', dashboard);
+app.use('/api/portals', portals);
 app.use('/api/platform', platform);
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found.' }));

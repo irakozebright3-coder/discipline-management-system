@@ -33,6 +33,8 @@ import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
 import OwnerDashboard from './pages/platform/OwnerDashboard.jsx';
 import Organizations from './pages/platform/Organizations.jsx';
+import Portals from './pages/Portals.jsx';
+import PortalDetail from './pages/PortalDetail.jsx';
 import PlatformUsers from './pages/platform/Users.jsx';
 import AuditLogs from './pages/platform/AuditLogs.jsx';
 import Contributors from './pages/platform/Contributors.jsx';
@@ -73,6 +75,8 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/people" element={<People />} />
             <Route path="/people/:personId" element={<StudentScoreCard />} />
+            <Route path="/portals" element={<Portals />} />
+            <Route path="/portals/:unitId" element={<PortalDetail />} />
             <Route path="/incidents" element={<Incidents />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/structure" element={<Structure />} />

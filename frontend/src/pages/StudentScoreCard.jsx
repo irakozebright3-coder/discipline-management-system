@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { useOrg, useRole } from '../hooks/useOrg.jsx';
 import { getPerson, getPersonScores, listIncidents, updatePerson, listStructureNodes, adjustScore } from '../lib/api.js';
 import PersonForm from '../components/PersonForm.jsx';
+import StudentDisciplineReport from '../components/StudentDisciplineReport.jsx';
+import DeductMarksDialog from '../components/DeductMarksDialog.jsx';
 import SearchBar from '../components/SearchBar.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { Input } from '../components/ui/input.jsx';
@@ -24,6 +26,7 @@ export default function StudentScoreCard() {
   const [notice, setNotice] = useState('');
   const [editing, setEditing] = useState(false);
   const [adjust, setAdjust] = useState(null); // { term, amount, note }
+  const [deducting, setDeducting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -111,6 +114,16 @@ export default function StudentScoreCard() {
                 </Card>
               </div>
 
+              {isHS && scores && person.person_type === 'student' && (
+                <StudentDisciplineReport
+                  person={person}
+                  scores={scores}
+                  unitNames={{ class: unitName(person.class_unit_id), trade: unitName(person.trade_unit_id) }}
+                  canDeduct={canWrite}
+                  onDeduct={() => setDeducting(true)}
+                />
+              )}
+
               {isHS && scores && (
                 <Card>
                   <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -192,6 +205,15 @@ export default function StudentScoreCard() {
             </>
           )}
         </>
+      )}
+      {deducting && scores && (
+        <DeductMarksDialog
+          orgId={orgId}
+          student={{ id: person.id, full_name: person.full_name, person_id: person.person_id, terms: (scores.terms || []).map(t => ({ term: t.term, remaining: t.remaining })) }}
+          rules={scores.rules}
+          onClose={() => setDeducting(false)}
+          onDone={() => { setDeducting(false); setNotice('Marks deducted.'); setReloadKey(k => k + 1); }}
+        />
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import { Users, FileWarning, AlertTriangle, ListChecks } from 'lucide-react';
 import { useOrg } from '../hooks/useOrg.jsx';
 import { getDashboard, listIncidents } from '../lib/api.js';
 import StatCard from '../components/StatCard.jsx';
+import DisciplineOverviewCard from '../components/DisciplineOverviewCard.jsx';
 import SearchBar from '../components/SearchBar.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card.jsx';
 import { Badge } from '../components/ui/badge.jsx';
@@ -48,6 +49,7 @@ export default function Dashboard() {
         <StatCard label="Open cases" value={stats ? stats.open_cases : '…'} icon={AlertTriangle} />
         <StatCard label="Resolved + closed" value={stats ? stats.resolved_cases : '…'} icon={ListChecks} />
       </div>
+      <DisciplineOverviewCard orgId={orgId} />
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <CardTitle>Recent cases</CardTitle>
