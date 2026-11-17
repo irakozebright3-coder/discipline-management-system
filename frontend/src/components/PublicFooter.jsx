@@ -11,7 +11,6 @@ export default function PublicFooter() {
           <Link to="/" aria-label="Discipline Management home">
             <SdmsLogo className="dm-footer-brand" />
           </Link>
-          <p className="text-xs">Owner &amp; developer: IRAKOZE Bright</p>
         </div>
 
         <nav className="dm-footer-links" aria-label="Footer navigation">

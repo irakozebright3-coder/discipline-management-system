@@ -1,5 +1,5 @@
 import { Link, Outlet } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, ShieldCheck } from 'lucide-react';
 import SdmsLogo from './SdmsLogo.jsx';
 
 export default function AuthLayout() {
@@ -19,7 +19,6 @@ export default function AuthLayout() {
         </div>
         <div className="dm-auth-bottom">
           <span>DISCIPLINE MANAGEMENT</span>
-          <span>Built by IRAKOZE Bright <ArrowRight size={14} /></span>
         </div>
         <div className="dm-auth-visual-orb" aria-hidden="true" />
       </section>

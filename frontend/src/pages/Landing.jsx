@@ -212,7 +212,7 @@ export default function Landing() {
         <div className="dm-hero-grid-glow" aria-hidden="true" />
         <div className="dm-hero-inner">
           <div className="dm-hero-copy">
-            <div className="dm-owner-pill"><Sparkles size={14} /><span>Built by <strong>{creator?.full_name || 'IRAKOZE Bright'}</strong></span><span className="dm-pill-separator">·</span><span>Discipline Management</span></div>
+            <div className="dm-owner-pill"><Sparkles size={14} /><span>Discipline Management</span></div>
             <div className="dm-eyebrow"><span className="dm-eyebrow-dot" /> One platform · Five institution tracks</div>
             <h1 className="dm-hero-title">
               Discipline with <span className="dm-title-gradient">clarity.</span><br />
