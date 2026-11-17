@@ -87,31 +87,19 @@ export default function CourtScene({ className = '' }) {
     const f2 = frame(W - 1.2, D - 0.8, 0.025); f2.position.set(0.12, coverY, 0);
     book.add(f1, f2);
 
-    // Scales of justice, raised slightly off the cover so it reads clearly.
-    const emblem = new THREE.Group();
-    const m = (geo, x, y, z) => { const o = new THREE.Mesh(geo, gold); o.position.set(x, y, z); o.castShadow = true; return o; };
-    emblem.add(m(new THREE.CylinderGeometry(0.34, 0.4, 0.05, 40), 0, 0.025, 0.62));     // base
-    emblem.add(m(new THREE.CylinderGeometry(0.05, 0.07, 1.25, 20), 0, 0.65, 0.62));     // post
-    emblem.add(m(new THREE.SphereGeometry(0.09, 20, 20), 0, 1.31, 0.62));                // finial
-    const beamMesh = m(new THREE.BoxGeometry(1.9, 0.07, 0.07), 0, 1.18, 0.62);           // beam
-    emblem.add(beamMesh);
-    [-0.88, 0.88].forEach(x => {
-      // hanging strings
-      const stringGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.62, 6);
-      [[-0.2, -0.0], [0.2, -0.0]].forEach(([dx]) => {
-        const st = m(stringGeo, x + dx * 0.7, 0.86, 0.62); st.rotation.z = dx > 0 ? -0.33 : 0.33; emblem.add(st);
-      });
-      const pan = m(new THREE.CylinderGeometry(0.34, 0.3, 0.06, 40), x, 0.54, 0.62);     // pan
-      emblem.add(pan);
-    });
-    emblem.scale.setScalar(0.78);
-    emblem.rotation.x = -Math.PI / 2 + 0.0;   // stand it up facing the viewer, lying on the cover
-    emblem.position.set(0.12, coverY + 0.02, -0.15);
-    emblem.rotation.set(0, 0, 0);
-    // Lay flat: rotate about X so +Y (height) maps to -Z (toward the spine's far edge)
-    emblem.rotation.x = -Math.PI / 2;
-    emblem.position.set(0.12, coverY + 0.03, 0.35);
-    book.add(emblem);
+    // Gold seal on the cover: a raised medallion with a ring and a centre boss. Reads clearly from any angle.
+    const seal = new THREE.Group();
+    const disc = (r, h, y, mat = gold) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 64), mat); o.position.y = y; o.castShadow = true; return o; };
+    seal.add(disc(0.62, 0.035, 0.0175));                                           // outer plate
+    const ringOuter = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.025, 14, 64), gold);
+    ringOuter.rotation.x = Math.PI / 2; ringOuter.position.y = 0.055; seal.add(ringOuter);
+    seal.add(disc(0.4, 0.03, 0.05, leatherDark));                                  // dark inset
+    const ringInner = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.018, 12, 64), gold);
+    ringInner.rotation.x = Math.PI / 2; ringInner.position.y = 0.072; seal.add(ringInner);
+    const boss = new THREE.Mesh(new THREE.SphereGeometry(0.15, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), gold);
+    boss.position.y = 0.065; boss.scale.y = 0.55; boss.castShadow = true; seal.add(boss);
+    seal.position.set(-0.55, coverY, -0.35);
+    book.add(seal);
 
     // Spine bands.
     for (let i = -1; i <= 1; i++) {

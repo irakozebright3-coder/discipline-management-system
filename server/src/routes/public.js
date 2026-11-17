@@ -79,7 +79,11 @@ export function normaliseContact(raw) {
   const v = String(raw || '').trim();
   if (!v || v.length > 200) return null;
   if (v.includes('@')) return EMAIL_RE.test(v) ? { contact: v.toLowerCase(), type: 'email' } : null;
-  const digits = v.replace(/[\s\-().]/g, '');
+  let digits = v.replace(/[\s\-().]/g, '');
+  // Rwandan local format (07XXXXXXXX, 10 digits) is by far the most common way people type their number here,
+  // so read it as +250. Anything else must carry its own country code so we never guess a country.
+  if (/^07\d{8}$/.test(digits)) digits = '+250' + digits.slice(1);
+  else if (/^00[1-9]/.test(digits)) digits = '+' + digits.slice(2);   // 00250... international prefix
   return PHONE_RE.test(digits) ? { contact: digits, type: 'phone' } : null;
 }
 
@@ -93,7 +97,7 @@ router.post('/subscribe', async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error, 'Enter your email or phone number.') });
   if (parsed.data.website) return res.status(201).json({ data: { subscribed: true } }); // bots get a fake success
   const c = normaliseContact(parsed.data.contact);
-  if (!c) return res.status(400).json({ error: 'That does not look like a valid email or phone number. For a phone, include the country code, e.g. +250788123456.' });
+  if (!c) return res.status(400).json({ error: 'That does not look like a valid email or phone number. For a phone, use 07XXXXXXXX or include the country code, e.g. +250788123456.' });
 
   // Throttle: a flood of new subscriptions from one burst is almost certainly a bot.
   const { count: recent } = await adminDb.from('subscribers').select('id', { count: 'exact', head: true })
