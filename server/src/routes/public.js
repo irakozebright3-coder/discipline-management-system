@@ -85,7 +85,7 @@ export function normaliseContact(raw) {
 
 const subscribeSchema = z.object({
   contact: z.string().min(1, 'Enter your email or phone number.').max(200),
-  website: z.string().max(0).optional() // honeypot
+  website: z.string().max(500).optional() // honeypot: checked below, so bots get no hint
 });
 
 router.post('/subscribe', async (req, res) => {
