@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowDownRight, ArrowRight, BarChart3, Briefcase, CheckCircle2,
@@ -9,6 +9,8 @@ import { getCommunityStats, getCreatorProfile } from '../lib/api.js';
 import MemberGallery from '../components/MemberGallery.jsx';
 import { TRACKS, membersByTrack } from '../lib/memberGallery.js';
 import '../styles/landing.css';
+
+const CourtScene = lazy(() => import('../components/CourtScene.jsx'));
 
 const ROTATING_AUDIENCES = ['schools', 'universities', 'organizations'];
 
@@ -233,32 +235,13 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="dm-hero-visual" aria-label="Illustrative Discipline Management dashboard" role="img">
+          <div className="dm-hero-visual dm-court-visual" aria-label="A law book with a judge's gavel resting on it" role="img">
             <div className="dm-orb dm-orb-one" aria-hidden="true" />
             <div className="dm-orb dm-orb-two" aria-hidden="true" />
-            <div className="dm-hero-ring dm-ring-one" aria-hidden="true" />
-            <div className="dm-hero-ring dm-ring-two" aria-hidden="true" />
-            <div className="dm-hero-glass-card">
-              <div className="dm-window-bar"><div className="dm-window-dots"><i /><i /><i /></div><span>dm.workspace</span><span className="dm-window-lock"><LockKeyhole size={12} /> Secure workspace</span></div>
-              <div className="dm-hero-dashboard">
-                <aside className="dm-hero-mini-sidebar"><div className="dm-mini-logo">DM</div><span className="active"><Layers size={15} /></span><span><Users size={15} /></span><span><FileCheck2 size={15} /></span><span><BarChart3 size={15} /></span></aside>
-                <div className="dm-hero-mini-main">
-                  <div className="dm-hero-mini-heading"><div><small>INSTITUTION OVERVIEW</small><h2>Good afternoon, Admin</h2><p>Here is your workspace at a glance.</p></div><span className="dm-mini-avatar">A</span></div>
-                  <div className="dm-hero-stat-grid">
-                    <div><span>People</span><b>248</b><small><span className="dm-mini-trend">↗</span> Example data</small></div>
-                    <div><span>Open cases</span><b>18</b><small><span className="dm-mini-trend">●</span> In review</small></div>
-                    <div><span>Follow-ups</span><b>06</b><small>Due this week</small></div>
-                  </div>
-                  <div className="dm-hero-mini-panels">
-                    <div className="dm-mini-chart-panel"><div className="dm-mini-panel-title"><b>Case activity</b><span>Illustrative</span></div><div className="dm-mini-chart-bars">{[36, 58, 44, 73, 53, 84, 67, 92, 61, 74].map((h, i) => <i key={i} style={{ height: h + '%' }} />)}</div><div className="dm-mini-chart-axis"><span>Week 1</span><span>Week 4</span></div></div>
-                    <div className="dm-mini-activity-panel"><div className="dm-mini-panel-title"><b>Latest updates</b><span>Preview</span></div><div className="dm-mini-activity-row"><span className="dm-activity-icon mint"><CheckCircle2 size={13} /></span><span><b>Review recorded</b><small>Case status updated</small></span></div><div className="dm-mini-activity-row"><span className="dm-activity-icon blue"><FileCheck2 size={13} /></span><span><b>New report</b><small>Awaiting assignment</small></span></div><div className="dm-mini-activity-row"><span className="dm-activity-icon purple"><Clock3 size={13} /></span><span><b>Follow-up due</b><small>Scheduled for review</small></span></div></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="dm-float-card dm-float-approved"><span className="dm-float-icon"><CheckCircle2 size={17} /></span><span><b>Decision recorded</b><small>History stays connected</small></span></div>
-            <div className="dm-float-card dm-float-audit"><span className="dm-float-icon blue"><ShieldCheck size={17} /></span><span><b>Audit-ready timeline</b><small>Actions with context</small></span></div>
-            <div className="dm-hero-note"><span className="dm-hero-note-dot" />Illustrative interface · Not live records</div>
+            <div className="dm-court-glow" aria-hidden="true" />
+            <Suspense fallback={<div className="dm-court-fallback" aria-hidden="true" />}>
+              <CourtScene className="dm-court-canvas" />
+            </Suspense>
           </div>
         </div>
         <div className="dm-hero-bottom-fade" aria-hidden="true" />
