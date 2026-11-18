@@ -87,19 +87,46 @@ export default function CourtScene({ className = '' }) {
     const f2 = frame(W - 1.2, D - 0.8, 0.025); f2.position.set(0.12, coverY, 0);
     book.add(f1, f2);
 
-    // Gold seal on the cover: a raised medallion with a ring and a centre boss. Reads clearly from any angle.
-    const seal = new THREE.Group();
-    const disc = (r, h, y, mat = gold) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 64), mat); o.position.y = y; o.castShadow = true; return o; };
-    seal.add(disc(0.62, 0.035, 0.0175));                                           // outer plate
-    const ringOuter = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.025, 14, 64), gold);
-    ringOuter.rotation.x = Math.PI / 2; ringOuter.position.y = 0.055; seal.add(ringOuter);
-    seal.add(disc(0.4, 0.03, 0.05, leatherDark));                                  // dark inset
-    const ringInner = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.018, 12, 64), gold);
-    ringInner.rotation.x = Math.PI / 2; ringInner.position.y = 0.072; seal.add(ringInner);
-    const boss = new THREE.Mesh(new THREE.SphereGeometry(0.15, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), gold);
-    boss.position.y = 0.065; boss.scale.y = 0.55; boss.castShadow = true; seal.add(boss);
-    seal.position.set(-0.55, coverY, -0.35);
-    book.add(seal);
+    // Scales of justice: base, upright post, a horizontal balancing bar on top, and two hanging pans.
+    // Built in a group so the bar can gently rock like it is weighing.
+    const scale = new THREE.Group();
+    const SCALE_H = 1.55;
+    const add = (geo, x, y, z, mat = gold) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = true; scale.add(o); return o; };
+    add(new THREE.CylinderGeometry(0.42, 0.5, 0.08, 48), 0, 0.04, 0);                       // wide base
+    add(new THREE.CylinderGeometry(0.3, 0.36, 0.07, 48), 0, 0.115, 0);                       // base step
+    add(new THREE.CylinderGeometry(0.06, 0.09, SCALE_H, 24), 0, 0.15 + SCALE_H / 2, 0);     // post
+    add(new THREE.SphereGeometry(0.11, 24, 24), 0, 0.15 + SCALE_H + 0.04, 0);               // pivot ball
+
+    const beam = new THREE.Group();                                                          // the balancing bar
+    beam.position.y = 0.15 + SCALE_H + 0.04;
+    const BAR = 1.9;
+    const barMesh = new THREE.Mesh(new THREE.BoxGeometry(BAR, 0.085, 0.085), gold);
+    barMesh.castShadow = true; beam.add(barMesh);
+    [-1, 1].forEach(sx => {
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 16), gold);
+      knob.position.x = sx * (BAR / 2); beam.add(knob);
+    });
+    // Each side: three thin chains down to a shallow pan.
+    const PAN_DROP = 0.95;
+    const panGroups = [-1, 1].map(sx => {
+      const g = new THREE.Group();
+      g.position.x = sx * (BAR / 2 - 0.04);
+      [[-0.3, 0], [0.3, 0], [0, 0.0]].forEach(([dx]) => {
+        const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, Math.hypot(PAN_DROP, 0.3), 6), gold);
+        chain.position.set(dx / 2, -PAN_DROP / 2, 0);
+        chain.rotation.z = Math.atan2(dx, PAN_DROP) * -1;
+        g.add(chain);
+      });
+      const pan = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.28, 0.08, 40), gold);
+      pan.position.y = -PAN_DROP; pan.castShadow = true; g.add(pan);
+      const lip = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.014, 10, 48), gold);
+      lip.rotation.x = Math.PI / 2; lip.position.y = -PAN_DROP + 0.04; g.add(lip);
+      beam.add(g);
+      return g;
+    });
+    scale.add(beam);
+    scale.position.set(-1.05, coverY, -0.1);
+    book.add(scale);
 
     // Spine bands.
     for (let i = -1; i <= 1; i++) {
@@ -141,23 +168,23 @@ export default function CourtScene({ className = '' }) {
     const ringR = ringL.clone(); ringR.position.x = 0.4;
     [foot, handle, gripBand, head, capL, capR, ringL, ringR].forEach(m => { m.castShadow = true; gavel.add(m); });
 
-    // Pivot sits on the cover. Gavel stands at the right of the emblem, turned to show its head side-on.
-    const gavelPivot = new THREE.Group();
-    gavelPivot.add(gavel);
-    gavelPivot.position.set(0.95, coverTop, -0.2);
-    gavelPivot.rotation.y = 0.35;
-    group.add(gavelPivot);
-
-    // Sound block the gavel strikes, set in front of it on the cover.
+    // Round plate (sound block) on the right of the cover. The gavel stands ON TOP of it.
     const blockMat = new THREE.MeshStandardMaterial({ color: 0x4a2410, roughness: 0.5 });
-    const BLOCK_X = 0.55, BLOCK_Z = 1.25;
-    const soundBlock = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.54, 0.14, 40), blockMat);
-    soundBlock.position.set(BLOCK_X, coverTop + 0.07, BLOCK_Z);
+    const PLATE_X = 1.0, PLATE_Z = 0.15, PLATE_H = 0.14;
+    const soundBlock = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.58, PLATE_H, 48), blockMat);
+    soundBlock.position.set(PLATE_X, coverTop + PLATE_H / 2, PLATE_Z);
     soundBlock.castShadow = true; soundBlock.receiveShadow = true;
     group.add(soundBlock);
-    const goldRing = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.018, 10, 60), gold);
-    goldRing.rotation.x = Math.PI / 2; goldRing.position.set(BLOCK_X, coverTop + 0.13, BLOCK_Z);
+    const goldRing = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.02, 10, 60), gold);
+    goldRing.rotation.x = Math.PI / 2; goldRing.position.set(PLATE_X, coverTop + PLATE_H - 0.01, PLATE_Z);
     group.add(goldRing);
+
+    // Pivot is the contact point: the gavel's foot touches the top of the plate.
+    const gavelPivot = new THREE.Group();
+    gavelPivot.add(gavel);
+    gavelPivot.position.set(PLATE_X, coverTop + PLATE_H, PLATE_Z);
+    gavelPivot.rotation.y = 0.35;
+    group.add(gavelPivot);
 
     // Ground shadow catcher and soft glow disc.
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.ShadowMaterial({ opacity: 0.38 }));
@@ -204,12 +231,16 @@ export default function CourtScene({ className = '' }) {
         group.rotation.y = -0.5 + Math.sin(t * 0.35) * 0.32 + pointer.x * 0.25;
         group.rotation.x = pointer.y * 0.06;
         book.position.y = Math.sin(t * 0.9) * 0.05;
-        // The gavel stands on its foot and sways very slightly, as if balanced.
-        gavelPivot.rotation.x = Math.sin(t * 0.8) * 0.025;
-        gavelPivot.rotation.z = Math.sin(t * 0.6 + 1) * 0.02;
-        gavelPivot.position.y = coverTop + book.position.y;
-        soundBlock.position.y = coverTop + 0.07 + book.position.y;
-        goldRing.position.y = coverTop + 0.13 + book.position.y;
+        // The balancing bar rocks slowly, as if weighing; the pans stay level by counter-rotating.
+        const rock = Math.sin(t * 0.9) * 0.07;
+        beam.rotation.z = rock;
+        panGroups.forEach(g => { g.rotation.z = -rock; });
+        // The gavel stays planted on the plate with only a hint of sway.
+        gavelPivot.rotation.x = Math.sin(t * 0.8) * 0.018;
+        gavelPivot.rotation.z = Math.sin(t * 0.6 + 1) * 0.014;
+        gavelPivot.position.y = coverTop + PLATE_H + book.position.y;
+        soundBlock.position.y = coverTop + PLATE_H / 2 + book.position.y;
+        goldRing.position.y = coverTop + PLATE_H - 0.01 + book.position.y;
       }
       renderer.render(scene, camera);
     };
