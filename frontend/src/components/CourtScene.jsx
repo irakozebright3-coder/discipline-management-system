@@ -179,12 +179,20 @@ export default function CourtScene({ className = '' }) {
     goldRing.rotation.x = Math.PI / 2; goldRing.position.set(PLATE_X, coverTop + PLATE_H - 0.01, PLATE_Z);
     group.add(goldRing);
 
-    // Pivot is the contact point: the gavel's foot touches the top of the plate.
+    // The gavel LIES on the plate: its heavy head rests on the plate, the handle trails off onto the book cover.
+    // Local axis: handle runs along +Y (foot at 0, head at HEAD_Y), the head barrel lies along X.
+    // Rotating about X keeps the barrel level and tips the handle flat; the small lieTilt lowers the foot onto the cover.
+    const HEAD_CAP_R = 0.375;
+    const lieTilt = Math.asin((PLATE_H + HEAD_CAP_R - 0.13) / HEAD_Y);
+    gavel.position.set(0, -HEAD_Y, 0);               // pivot at the head, so the head sits over the plate centre
     const gavelPivot = new THREE.Group();
     gavelPivot.add(gavel);
-    gavelPivot.position.set(PLATE_X, coverTop + PLATE_H, PLATE_Z);
-    gavelPivot.rotation.y = 0.35;
-    group.add(gavelPivot);
+    gavelPivot.rotation.x = -(Math.PI / 2 - lieTilt); // handle points toward the viewer (+Z), foot touching the cover
+    const lay = new THREE.Group();
+    lay.add(gavelPivot);
+    lay.position.set(PLATE_X, coverTop + PLATE_H + HEAD_CAP_R, PLATE_Z);   // head's underside rests on the plate top
+    lay.rotation.y = -0.4;                            // angle the handle across the cover, clear of the scales
+    group.add(lay);
 
     // Ground shadow catcher and soft glow disc.
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.ShadowMaterial({ opacity: 0.38 }));
@@ -235,10 +243,8 @@ export default function CourtScene({ className = '' }) {
         const rock = Math.sin(t * 0.9) * 0.07;
         beam.rotation.z = rock;
         panGroups.forEach(g => { g.rotation.z = -rock; });
-        // The gavel stays planted on the plate with only a hint of sway.
-        gavelPivot.rotation.x = Math.sin(t * 0.8) * 0.018;
-        gavelPivot.rotation.z = Math.sin(t * 0.6 + 1) * 0.014;
-        gavelPivot.position.y = coverTop + PLATE_H + book.position.y;
+        // The gavel lies still on the plate and just follows the book's gentle bob.
+        lay.position.y = coverTop + PLATE_H + HEAD_CAP_R + book.position.y;
         soundBlock.position.y = coverTop + PLATE_H / 2 + book.position.y;
         goldRing.position.y = coverTop + PLATE_H - 0.01 + book.position.y;
       }
