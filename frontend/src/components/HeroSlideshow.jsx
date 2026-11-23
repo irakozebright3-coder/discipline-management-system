@@ -25,9 +25,11 @@ export default function HeroSlideshow({ interval = 6000 }) {
     <div className="dm-slideshow" aria-hidden="true">
       {slides.map((s, i) => (
         <img key={s.src} src={s.src} alt="" loading={i === 0 ? 'eager' : 'lazy'} decoding="async"
+          style={{ objectPosition: s.focus || '50% 50%' }}
           className={`dm-slide${i === active ? ' is-active' : ''}`} />
       ))}
       <div className="dm-slideshow-overlay" />
+      {slides[active]?.label && <p className="dm-slide-caption" key={slides[active].src}>{slides[active].label}</p>}
       {slides.length > 1 && (
         <div className="dm-slideshow-dots">
           {slides.map((s, i) => <button key={s.src} type="button" tabIndex={-1} className={i === active ? 'is-active' : ''} onClick={() => setActive(i)} aria-label={`Show photo ${i + 1}`} />)}
