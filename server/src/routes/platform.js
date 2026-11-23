@@ -278,4 +278,92 @@ router.delete('/users/:id', async (req, res) => {
   res.json({ data: { deleted: true } });
 });
 
+// ---------- Messages to subscribers (written in the platform console) ----------
+const messageSchema = z.object({
+  subject: z.string().trim().min(3, 'Give the message a subject of at least 3 characters.').max(200),
+  body: z.string().trim().min(10, 'Write at least 10 characters in the message.').max(10000),
+  audience: z.enum(['all', 'email', 'phone']).default('all')
+});
+
+router.get('/messages', async (req, res) => {
+  const { data, error } = await adminDb.from('subscriber_messages').select('*').order('created_at', { ascending: false }).limit(200);
+  if (error) return res.status(500).json({ error: 'Could not load messages.' });
+  res.json({ data: data || [], email_delivery: Boolean(process.env.RESEND_API_KEY) });
+});
+
+router.post('/messages', async (req, res) => {
+  const parsed = messageSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error, 'Invalid message.') });
+  const { data, error } = await adminDb.from('subscriber_messages').insert({ ...parsed.data, created_by: req.user.id }).select().single();
+  if (error) return res.status(500).json({ error: 'Could not save the message.' });
+  res.status(201).json({ data });
+});
+
+router.patch('/messages/:id', async (req, res) => {
+  const parsed = messageSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error, 'Invalid message.') });
+  const { data: row } = await adminDb.from('subscriber_messages').select('id, status').eq('id', req.params.id).maybeSingle();
+  if (!row) return res.status(404).json({ error: 'Message not found.' });
+  if (row.status !== 'draft') return res.status(400).json({ error: 'A message that was already sent cannot be edited. Write a new one instead.' });
+  const { data, error } = await adminDb.from('subscriber_messages').update({ ...parsed.data, updated_at: new Date().toISOString() }).eq('id', row.id).select().single();
+  if (error) return res.status(500).json({ error: 'Could not save the message.' });
+  res.json({ data });
+});
+
+router.delete('/messages/:id', async (req, res) => {
+  const { error } = await adminDb.from('subscriber_messages').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: 'Could not delete the message.' });
+  res.json({ data: { deleted: true } });
+});
+
+const escapeHtml = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function emailHtml(body) {
+  const paras = String(body).split(/\n{2,}/).map(p => `<p style="margin:0 0 14px;line-height:1.6">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('');
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1b1511;max-width:560px;margin:0 auto;padding:24px">${paras}<hr style="border:none;border-top:1px solid #e5ddd3;margin:24px 0"><p style="font-size:12px;color:#7a6f64">You are receiving this because you subscribed for updates from Discipline Management.</p></div>`;
+}
+
+// Send (or record) a saved message. Email is delivered through Resend when RESEND_API_KEY is set.
+// Phone numbers cannot be texted without an SMS provider, so they are never reported as delivered.
+router.post('/messages/:id/send', async (req, res) => {
+  const { data: msg } = await adminDb.from('subscriber_messages').select('*').eq('id', req.params.id).maybeSingle();
+  if (!msg) return res.status(404).json({ error: 'Message not found.' });
+  if (msg.status !== 'draft') return res.status(400).json({ error: 'This message was already sent.' });
+
+  const { data: subs } = await adminDb.from('subscribers').select('contact, contact_type').eq('status', 'active').limit(5000);
+  const all = subs || [];
+  const emails = msg.audience === 'phone' ? [] : all.filter(s => s.contact_type === 'email').map(s => s.contact);
+  const phones = msg.audience === 'email' ? [] : all.filter(s => s.contact_type === 'phone').map(s => s.contact);
+  const total = emails.length + phones.length;
+  if (!total) return res.status(400).json({ error: 'There are no active subscribers for this audience yet.' });
+
+  let delivered = 0, failed = 0, status = 'recorded', note = '';
+  const key = process.env.RESEND_API_KEY;
+  if (emails.length && key) {
+    const from = process.env.MAIL_FROM || 'Discipline Management <onboarding@resend.dev>';
+    for (let i = 0; i < emails.length; i += 50) {
+      const batch = emails.slice(i, i + 50);
+      try {
+        const r = await fetch('https://api.resend.com/emails/batch', {
+          method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(batch.map(to => ({ from, to: [to], subject: msg.subject, html: emailHtml(msg.body), text: msg.body })))
+        });
+        if (r.ok) delivered += batch.length; else { failed += batch.length; note = `Email provider answered ${r.status}.`; }
+      } catch { failed += batch.length; note = 'Could not reach the email provider.'; }
+    }
+    status = failed === 0 ? 'sent' : (delivered > 0 ? 'partial' : 'failed');
+  } else if (emails.length && !key) {
+    note = 'Email delivery is not switched on yet (no RESEND_API_KEY), so nothing was emailed. The message is saved; use Copy recipients to send it yourself.';
+  }
+  if (phones.length) note = (note ? note + ' ' : '') + `${phones.length} phone subscriber(s) were not texted: text messages need an SMS provider, which is not connected.`;
+
+  const { data: saved } = await adminDb.from('subscriber_messages').update({
+    status, recipients_total: total, delivered, failed, delivery_note: note || null, sent_at: new Date().toISOString(), updated_at: new Date().toISOString()
+  }).eq('id', msg.id).select().single();
+  await adminDb.from('platform_audit_logs').insert({
+    action: 'subscriber_message.send', target: msg.subject, details: JSON.stringify({ audience: msg.audience, total, delivered, failed, status }),
+    user_name: req.user.email, actor_id: req.user.id, result: status === 'failed' ? 'Failed' : 'Success'
+  });
+  res.json({ data: saved, recipients: { emails, phones } });
+});
+
 export default router;

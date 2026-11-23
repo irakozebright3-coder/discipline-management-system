@@ -36,6 +36,7 @@ import Organizations from './pages/platform/Organizations.jsx';
 import Portals from './pages/Portals.jsx';
 import PortalDetail from './pages/PortalDetail.jsx';
 import Subscribers from './pages/platform/Subscribers.jsx';
+import PlatformMessages from './pages/platform/Messages.jsx';
 import PlatformUsers from './pages/platform/Users.jsx';
 import AuditLogs from './pages/platform/AuditLogs.jsx';
 import Contributors from './pages/platform/Contributors.jsx';
@@ -92,6 +93,7 @@ export default function App() {
             <Route path="organizations" element={<Organizations />} />
             <Route path="users" element={<PlatformUsers />} />
             <Route path="subscribers" element={<Subscribers />} />
+            <Route path="messages" element={<PlatformMessages />} />
             <Route path="audit-logs" element={<AuditLogs />} />
             <Route path="contributors" element={<Contributors />} />
             <Route path="creator-profile" element={<CreatorProfileManage />} />

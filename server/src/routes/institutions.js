@@ -18,10 +18,11 @@ const newInstitutionSchema = z.object({
 });
 
 // List institutions the caller can access.
+// Your workspace lists only the organizations this account belongs to. Platform owners still see every
+// institution, but in the Platform console (Institutions), not mixed into their own organization row.
 router.get('/', requireAuth, async (req, res) => {
-  const owner = await isPlatformOwner(req.user.id);
-  let query = adminDb.from('institutions').select('*, institution_memberships!inner(user_id, role, status)');
-  if (!owner) query = query.eq('institution_memberships.user_id', req.user.id).eq('institution_memberships.status', 'active');
+  let query = adminDb.from('institutions').select('*, institution_memberships!inner(user_id, role, status)')
+    .eq('institution_memberships.user_id', req.user.id).eq('institution_memberships.status', 'active');
   const { data, error } = await query.order('created_at', { ascending: true });
   if (error) return res.status(500).json({ error: 'Could not load your institutions.' });
   const rows = (data || []).map(i => {
@@ -40,6 +41,13 @@ router.post('/', requireAuth, async (req, res) => {
   const parsed = newInstitutionSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: zodMessage(parsed.error, 'Invalid institution details.') });
   const d = parsed.data;
+  // One account can run an organization on every track, plus extra groups. What it cannot do is register
+  // the same name twice on the same track (that is how accidental duplicates happen).
+  const { data: mine } = await adminDb.from('institution_memberships')
+    .select('institutions!inner(name, track)').eq('user_id', req.user.id).eq('role', 'institution_admin');
+  const clash = (mine || []).find(m => m.institutions?.track === d.track && String(m.institutions?.name || '').trim().toLowerCase() === d.name.trim().toLowerCase());
+  if (clash) return res.status(409).json({ error: `You already have "${d.name.trim()}" on the ${d.track.replace('_', ' ').toLowerCase()} track. Pick a different name, or open the existing one.` });
+  if ((mine || []).length >= 25) return res.status(400).json({ error: 'You have reached the limit of 25 organizations on one account.' });
   const { data: inst, error } = await adminDb.from('institutions').insert({
     name: d.name.trim(), type: d.track, track: d.track, timezone: d.timezone || 'Africa/Kigali',
     email: d.email || null, phone: d.phone || null, address: d.address || null, created_by: req.user.id

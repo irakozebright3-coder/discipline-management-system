@@ -1,5 +1,6 @@
 import { Outlet, Navigate } from 'react-router-dom';
 import Sidebar from './Sidebar.jsx';
+import OrgStrip from './OrgStrip.jsx';
 import { useOrg } from '../hooks/useOrg.jsx';
 
 export default function Layout() {
@@ -22,6 +23,7 @@ export default function Layout() {
         <Sidebar />
         <main className="min-w-0 flex-1 overflow-x-hidden">
           <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+            <OrgStrip />
             <Outlet />
           </div>
         </main>

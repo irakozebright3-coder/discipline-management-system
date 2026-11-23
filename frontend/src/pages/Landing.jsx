@@ -8,12 +8,19 @@ import {
 import { getCommunityStats, getCreatorProfile } from '../lib/api.js';
 import MemberGallery from '../components/MemberGallery.jsx';
 import SubscribeBar from '../components/SubscribeBar.jsx';
+import TypingHeadline from '../components/TypingHeadline.jsx';
+import HeroSlideshow from '../components/HeroSlideshow.jsx';
 import { TRACKS, membersByTrack } from '../lib/memberGallery.js';
 import '../styles/landing.css';
 
 const CourtScene = lazy(() => import('../components/CourtScene.jsx'));
 
-const ROTATING_AUDIENCES = ['schools', 'universities', 'organizations'];
+// Each phrase types out in full, is erased, then the next one types, forever.
+const HERO_PHRASES = [
+  { lines: [{ text: 'Discipline with' }, { text: 'clarity.', accent: true }, { text: 'Designed for' }, { text: 'schools.', accent: true }] },
+  { lines: [{ text: 'Discipline with' }, { text: 'clarity.', accent: true }, { text: 'Designed for' }, { text: 'universities.', accent: true }] },
+  { lines: [{ text: 'Discipline with' }, { text: 'clarity.', accent: true }, { text: 'Designed for' }, { text: 'organizations.', accent: true }] }
+];
 
 const TRACK_ICONS = {
   HIGH_SCHOOL: School,
@@ -147,7 +154,6 @@ function ProductPreview({ slide }) {
 export default function Landing() {
   const [stats, setStats] = useState(null);
   const [creator, setCreator] = useState(null);
-  const [audienceIndex, setAudienceIndex] = useState(0);
   const [activeShowcase, setActiveShowcase] = useState(0);
   const swipeStart = useRef(null);
 
@@ -160,15 +166,6 @@ export default function Landing() {
       .then(({ data }) => { if (active && data) setCreator(data); })
       .catch(() => { if (active) setCreator(null); });
     return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion) return undefined;
-    const timer = window.setInterval(() => {
-      setAudienceIndex((index) => (index + 1) % ROTATING_AUDIENCES.length);
-    }, 2600);
-    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -212,16 +209,11 @@ export default function Landing() {
   return (
     <main className="dm-landing">
       <section className="dm-hero">
+        <HeroSlideshow />
         <div className="dm-hero-grid-glow" aria-hidden="true" />
         <div className="dm-hero-inner">
           <div className="dm-hero-copy">
-            <div className="dm-owner-pill"><Sparkles size={14} /><span>Discipline Management</span></div>
-            <div className="dm-eyebrow"><span className="dm-eyebrow-dot" /> One platform · Five institution tracks</div>
-            <h1 className="dm-hero-title">
-              Discipline with <span className="dm-title-gradient">clarity.</span><br />
-              Designed for <span className="dm-rotator-window" aria-hidden="true"><span key={ROTATING_AUDIENCES[audienceIndex]} className="dm-rotator-word">{ROTATING_AUDIENCES[audienceIndex]}.</span></span>
-              <span className="dm-sr-only"> schools, universities, and organizations.</span>
-            </h1>
+            <TypingHeadline phrases={HERO_PHRASES} />
             <p className="dm-hero-description">
               A connected workspace for people, incidents, decisions and reporting — built to make discipline management more consistent, transparent and accountable.
             </p>
