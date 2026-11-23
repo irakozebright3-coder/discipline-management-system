@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Button } from './ui/button.jsx';
 
 // Accessible confirm modal for destructive actions. Focus starts on Cancel so Enter never deletes by accident.
-export default function ConfirmDialog({ title, children, confirmLabel = 'Delete', busy = false, error = '', onConfirm, onCancel }) {
+export default function ConfirmDialog({ title, children, confirmLabel = 'Delete', tone = 'danger', busy = false, error = '', onConfirm, onCancel }) {
   const cancelRef = useRef(null);
   useEffect(() => {
     cancelRef.current?.focus();
@@ -19,7 +19,7 @@ export default function ConfirmDialog({ title, children, confirmLabel = 'Delete'
         {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button ref={cancelRef} type="button" variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button>
-          <Button type="button" variant="destructive" onClick={onConfirm} disabled={busy}>{busy ? 'Working…' : confirmLabel}</Button>
+          <Button type="button" variant={tone === 'danger' ? 'destructive' : 'default'} onClick={onConfirm} disabled={busy}>{busy ? 'Working…' : confirmLabel}</Button>
         </div>
       </div>
     </div>

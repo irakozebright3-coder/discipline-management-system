@@ -166,7 +166,7 @@ export default function Messages() {
       </Card>
 
       {confirmSend && (
-        <ConfirmDialog title="Send this update?" confirmLabel={emailOn ? 'Send now' : 'Save as sent'} busy={busy} onConfirm={send} onCancel={() => setConfirmSend(false)}>
+        <ConfirmDialog title="Send this update?" tone="neutral" confirmLabel={emailOn ? 'Send now' : 'Save as sent'} busy={busy} onConfirm={send} onCancel={() => setConfirmSend(false)}>
           <p><b>{form.subject}</b> will go to {counts.forAudience} subscriber{counts.forAudience === 1 ? '' : 's'}. This cannot be undone.</p>
           {!emailOn && <p className="mt-2 text-amber-500">Email sending is off, so nothing will be emailed. It will be recorded and you can copy the recipients.</p>}
         </ConfirmDialog>
