@@ -237,7 +237,6 @@ export default function Landing() {
             </Suspense>
           </div>
         </div>
-        <div className="dm-hero-bottom-fade" aria-hidden="true" />
       </section>
 
       <div className="dm-subscribe-wrap" style={{ padding: '0 1.25rem', marginTop: '-1.5rem', position: 'relative', zIndex: 2 }}><SubscribeBar variant="banner" /></div>
