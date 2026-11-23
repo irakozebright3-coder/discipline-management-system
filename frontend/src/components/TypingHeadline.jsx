@@ -42,18 +42,25 @@ export default function TypingHeadline({ phrases, typeMs = 70, eraseMs = 32, hol
   let cursorLine = 0;
   lines.forEach((l, i) => { if (l.shown.length > 0) cursorLine = i; });
 
+  // An invisible copy of the longest phrase reserves the final height up front, so the text below never jumps
+  // as lines appear, and no empty gap is left under the line that is currently being typed.
+  const longest = phrases.reduce((a, b) => (b.lines.map(l => l.text).join('').length > a.lines.map(l => l.text).join('').length ? b : a));
+
   return (
     <h1 className="dm-hero-title dm-typing">
       <span className="dm-sr-only">{phrases[0].lines.map(l => l.text).join(' ')}</span>
-      <span aria-hidden="true" className="dm-typing-lines">
-        {lines.map((l, i) => (
-          <span key={i} className={`dm-typing-line${l.accent ? ' dm-title-gradient' : ''}`}>
-            {l.shown}
-            {i === cursorLine && <span className="dm-caret" />}
-            {/* keep line height stable while the line is still empty */}
-            {l.shown.length === 0 && i !== cursorLine ? '\u00A0' : null}
-          </span>
-        ))}
+      <span className="dm-typing-stack" aria-hidden="true">
+        <span className="dm-typing-ghost">
+          {longest.lines.map((l, i) => <span key={i} className="dm-typing-line">{l.text}</span>)}
+        </span>
+        <span className="dm-typing-lines">
+          {lines.map((l, i) => (
+            <span key={i} className={`dm-typing-line${l.accent ? ' dm-title-gradient' : ''}`}>
+              {l.shown}
+              {i === cursorLine && <span className="dm-caret" />}
+            </span>
+          ))}
+        </span>
       </span>
     </h1>
   );

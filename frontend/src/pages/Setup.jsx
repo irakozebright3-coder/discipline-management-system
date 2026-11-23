@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { createInstitution } from '../lib/api.js';
 import { Link } from 'react-router-dom';
 import { useOrg } from '../hooks/useOrg.jsx';
@@ -18,6 +18,11 @@ export default function Setup() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Reached by the automatic 'no organization yet' redirect, but the account does have organizations
+  // (this can happen for a moment right after signing in): go to the dashboard instead of staying here.
+  if (hasOrgs && location.state?.auto) return <Navigate to="/dashboard" replace />;
 
   const submit = async (e) => {
     e.preventDefault();

@@ -14,7 +14,7 @@ export default function Layout() {
     );
   }
 
-  if (orgs.length === 0) return <Navigate to="/setup" replace />;
+  if (orgs.length === 0) return <Navigate to="/setup" replace state={{ auto: true }} />;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
